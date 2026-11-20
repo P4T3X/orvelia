@@ -1,0 +1,158 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------------------------
+   ORVELIA design tokens — Luxury Technology
+   Brand palette (fixed):
+     Graphite Black #111315 · Deep Charcoal #1A1D20 · Warm Ivory #F6F4EF
+     Champagne Gold #C7A66A · Muted Silver #B7BBC0 · Soft Gray #858B92
+   Gold is an accent only: focus, progress, the brand mark.
+--------------------------------------------------------------------------- */
+:root {
+  --graphite: #111315;
+  --charcoal: #1a1d20;
+  --ivory: #f6f4ef;
+  --gold: #c7a66a;
+  --silver: #b7bbc0;
+  --soft-gray: #858b92;
+
+  --background: var(--ivory);
+  --foreground: var(--graphite);
+  --surface: #fbfaf7;
+  --surface-raised: #ffffff;
+  --muted: #eeebe4;
+  --muted-foreground: #63686e; /* soft gray darkened for AA contrast on ivory */
+  --border: #e2ded5;
+  --border-strong: #cfcac0;
+  --primary: var(--graphite);
+  --primary-foreground: var(--ivory);
+  --accent: var(--gold);
+  --accent-ink: #8a6d36; /* gold tuned for text on light surfaces */
+  --ring: var(--gold);
+  --danger: #a33a32;
+  --danger-surface: #f7e9e6;
+  --success: #3f6b4f;
+}
+
+.dark {
+  --background: var(--graphite);
+  --foreground: var(--ivory);
+  --surface: var(--charcoal);
+  --surface-raised: #212529;
+  --muted: #202327;
+  --muted-foreground: #9a9fa6;
+  --border: #2a2e33;
+  --border-strong: #3a3f45;
+  --primary: var(--ivory);
+  --primary-foreground: var(--graphite);
+  --accent-ink: var(--gold);
+  --danger: #e08a80;
+  --danger-surface: #2d1d1b;
+  --success: #8fbf9f;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-ring: var(--ring);
+  --color-danger: var(--danger);
+  --color-danger-surface: var(--danger-surface);
+  --color-success: var(--success);
+  --color-silver: var(--silver);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--gold) 35%, transparent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* Hero entrance — the single orchestrated motion moment on the site. */
+@keyframes record-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fill-bar {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@utility animate-record-in {
+  animation: record-in 900ms var(--ease-out-soft) 150ms both;
+}
+
+@utility animate-fill-bar {
+  transform-origin: left;
+  animation: fill-bar 1100ms var(--ease-out-soft) 700ms both;
+}
