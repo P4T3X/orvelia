@@ -15,7 +15,7 @@ export function createGatewayExtractor(modelId: string, timeoutMs = 60_000): Rec
     async extract({ data, mediaType, today, signal }: ExtractInput) {
       const { output } = await generateText({
         model: modelId,
-        system: RECEIPT_INSTRUCTIONS,
+        instructions: RECEIPT_INSTRUCTIONS,
         output: Output.object({ schema: rawReceiptSchema }),
         messages: [
           {

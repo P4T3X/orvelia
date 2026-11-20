@@ -32,6 +32,12 @@
 - **Emails** carry no sensitive data beyond the reminder title; links point to
   the authenticated app.
 
+- **ORVELIA AI** can only read: 8 tools, each scoped by RLS and `user_id`; it has
+  no write tools. Record text is passed as data; links in answers are validated
+  against the records the tools returned in that turn; amounts are summed by the
+  server. Conversations are not stored. Monthly and per-minute limits are
+  enforced in Postgres.
+
 ## Supabase dashboard settings to configure
 
 - Auth → Email: **Confirm email ON**, secure password change ON.
@@ -50,5 +56,5 @@
 - Data export.
 - Content-Security-Policy with nonces.
 - Audit log table (`activity_logs`) for security events.
-- Per-minute rate limiting on uploads and AI calls (monthly quotas exist; burst limits pending).
+- Per-minute rate limiting on uploads (assistant has a 10/min limit; scans have monthly quotas).
 - Sentry error monitoring.

@@ -5,6 +5,7 @@ Migrations:
 - `supabase/migrations/20261121000000_products_phase2.sql` — Phase 2
 - `supabase/migrations/20261122000000_documents_phase3.sql` — Phase 3
 - `supabase/migrations/20261123000000_automation_phase4.sql` — Phase 4
+- `supabase/migrations/20261124000000_assistant_phase5.sql` — Phase 5
 
 Status: **proposed — review before applying.**
 
@@ -111,11 +112,23 @@ Serve files only through short-lived signed URLs.
   `complete_reminder(id, email_status, error, retry)`.
 - Verified on PostgreSQL 16 (`supabase/tests/phase4_automation.sql`).
 
+## Phase 5 additions
+
+- `plan_limits.ai_queries_per_month`: Free 0, Plus 100, Ultra 500 (were `null` =
+  unlimited, which left AI cost unbounded). Placeholders.
+- `reserve_assistant_query(provider)`: raises `ai_not_included`, `ai_limit_reached`
+  (monthly, user's time zone) or `rate_limited` (>10 per minute). `finish_usage(id, ok)`
+  closes any reservation of the caller; failed answers don't count. `assistant_usage()` for the UI.
+- `usage_this_month(user, operation)` generalizes the scan counter (internal only).
+- No conversation storage: questions and answers are not persisted.
+- Verified on PostgreSQL 16 (`supabase/tests/phase5_assistant.sql`).
+
 ## Open questions for review
 
 1. Initial `storage_mb` and `ai_queries_per_month` values per plan are placeholders.
 2. ~~User categories in V1?~~ Implemented in Phase 2 (create inline, delete in Settings).
 4. Should archived/sold products count toward the Free limit? Currently all statuses count.
+7. AI quotas per plan (Free 0 / Plus 100 / Ultra 500) are placeholders: set them from measured cost per question.
 6. Should automatic reminders also go out for products marked sold/gifted/disposed? Currently they do until the warranty/return is deleted.
 5. Scan quota resets on the 1st of each month in the user's time zone; should it follow the billing period for paid plans instead?
 3. Payment provider for Peru (affects `subscriptions.provider` values and webhooks).

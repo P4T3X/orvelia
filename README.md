@@ -5,7 +5,8 @@ Personal Ownership Management — *Todo lo que posees. Un solo espacio inteligen
 Web-first, mobile-ready platform built with Next.js 16 + Supabase. This
 repository currently covers **Phase 0 (foundation)**, **Phase 1 (brand and web
 foundation)**, **Phase 2 (ownership management)**, **Phase 3 (document
-intelligence)** and **Phase 4 (automation)** of the master technical document.
+intelligence)**, **Phase 4 (automation)** and **Phase 5 (ORVELIA AI)** of the
+master technical document.
 
 ## What's in Phase 0–1
 
@@ -76,7 +77,7 @@ setup notice.
 | `pnpm test` | Unit tests (shared Zod schemas) |
 
 SQL smoke tests (against a local DB with the migrations applied):
-`supabase/tests/rls_smoke.sql`, `phase2_products.sql`, `phase3_documents.sql`, `phase4_automation.sql` (run with `psql "$DB_URL" -f …`)
+`supabase/tests/rls_smoke.sql`, `phase2_products.sql`, `phase3_documents.sql`, `phase4_automation.sql`, `phase5_assistant.sql` (run with `psql "$DB_URL" -f …`)
 
 ## Deploying to Vercel
 
@@ -142,11 +143,30 @@ EMAIL_FROM="ORVELIA <avisos@your-domain>" # a domain verified in Resend
 works on the Hobby plan. On Pro, change it to hourly (`0 * * * *`) so users in
 other time zones get reminders at their own 09:00.
 
-## Next: Phase 5 — ORVELIA AI
+## What's in Phase 5
 
-Assistant over the user's own records: provider-independent AI service, context
-retrieval scoped by RLS, structured answers with links to records, no invented
-dates or amounts, and usage tracking against the plan.
+| Area | Status |
+|---|---|
+| `/app/assistant` chat with suggested questions (active warranties, upcoming deadlines, spending, missing receipts, recent purchases, maintenance) | ✅ |
+| Provider-independent `AssistantModel` (`packages/ai`): AI Gateway implementation with tool calling, plus a labeled test assistant refused in production | ✅ |
+| 8 **read-only** tools; every query runs with the user's session (RLS) **and** an explicit `user_id` filter | ✅ |
+| Spending totals computed by the server in integer cents, **per currency** (never mixed or converted); products without price reported separately | ✅ |
+| Record links: the model writes `[[product:ID]]` tokens; the server keeps only ids returned by a tool in that same turn and drops the rest | ✅ |
+| Prompt rules: answer only from tool results, never invent dates/amounts/terms, treat record text as data | ✅ |
+| Monthly quota per plan + 10 questions/minute burst limit, enforced in Postgres; failed answers don't count; conversations are not stored | ✅ |
+
+```
+ORVELIA_AI_PROVIDER=gateway
+ORVELIA_ASSISTANT_MODEL=<provider/model with tool calling>   # falls back to ORVELIA_EXTRACTION_MODEL
+```
+
+Plan quotas (`plan_limits.ai_queries_per_month`): Free 0 · Plus 100 · Ultra 500 —
+**placeholders to tune** against real cost per question before launch.
+
+## Next: Phase 6 — Monetization
+
+Payment provider for Peru, checkout for Plus/Ultra, signed webhooks as the only
+writer of `subscriptions`, plan changes, and the billing page.
 
 ---
 

@@ -413,6 +413,12 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      reserve_assistant_query: { Args: { p_provider: string }; Returns: string };
+      finish_usage: { Args: { p_usage_id: string; p_succeeded: boolean }; Returns: undefined };
+      assistant_usage: {
+        Args: Record<string, never>;
+        Returns: { used: number; queries_per_month: number | null; plan: PlanId }[];
+      };
       resync_my_reminders: { Args: Record<string, never>; Returns: number };
       claim_due_reminders: {
         Args: { p_limit: number };
