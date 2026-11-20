@@ -4,7 +4,8 @@ Personal Ownership Management — *Todo lo que posees. Un solo espacio inteligen
 
 Web-first, mobile-ready platform built with Next.js 16 + Supabase. This
 repository currently covers **Phase 0 (foundation)**, **Phase 1 (brand and web
-foundation)** and **Phase 2 (ownership management)** of the master technical document.
+foundation)**, **Phase 2 (ownership management)** and **Phase 3 (document
+intelligence)** of the master technical document.
 
 ## What's in Phase 0–1
 
@@ -75,7 +76,7 @@ setup notice.
 | `pnpm test` | Unit tests (shared Zod schemas) |
 
 SQL smoke tests (against a local DB with the migrations applied):
-`psql "$DB_URL" -f supabase/tests/rls_smoke.sql` and `supabase/tests/phase2_products.sql`
+`supabase/tests/rls_smoke.sql`, `phase2_products.sql`, `phase3_documents.sql` (run with `psql "$DB_URL" -f …`)
 
 ## Deploying to Vercel
 
@@ -88,11 +89,38 @@ from `.env.example`. Vercel detects pnpm workspaces automatically.
 - `docs/database/schema.md` — schema review notes and open questions
 - `docs/security/` — security baseline and pending items
 
-## Next: Phase 3 — Document intelligence
+## What's in Phase 3
 
-Private uploads of receipts and documents, a provider-independent OCR/extraction
-layer with Zod-validated output, the editable confirmation screen (nothing saved
-without the user's confirmation) and linking receipts/documents to products.
+| Area | Status |
+|---|---|
+| Receipt upload (photo, camera on mobile, PDF; ≤10 MB; file signature checked on the server; photos resized and stripped of EXIF/GPS in the browser) | ✅ |
+| Provider-independent AI layer (`packages/ai`): `ReceiptExtractor` interface, AI Gateway implementation, Zod-validated output, deterministic sanitizing that never fills missing values, warnings | ✅ |
+| Review screen: every field editable and tagged *Leído* / *Editado*; nothing saved before confirmation; per-field provenance stored (`field_sources`) | ✅ |
+| Create products from receipt items, or link the receipt to existing products | ✅ |
+| Monthly scan quota from `plan_limits`, enforced in the database; failed readings don't count; manual entry when the quota is used or AI is not configured | ✅ |
+| Documents (warranty, manual, invoice, insurance, certificate…) with type, optional product and expiry date | ✅ |
+| Private file access through an ownership-checked route that redirects to a 2-minute signed URL | ✅ |
+| Product page shows its receipt and documents; dashboard shows receipts pending review | ✅ |
+
+### Turning on automatic reading
+
+Set in `apps/web/.env.local` (or Vercel project settings):
+
+```
+ORVELIA_AI_PROVIDER=gateway
+ORVELIA_EXTRACTION_MODEL=<provider/model with vision + PDF input, from the AI Gateway model list>
+AI_GATEWAY_API_KEY=<only for local dev; on Vercel the project OIDC token is used>
+```
+
+Without these, the scanner still stores files and the user types the data.
+`ORVELIA_AI_PROVIDER=fixture` returns labeled test data for local development and
+is refused when `VERCEL_ENV=production`.
+
+## Next: Phase 4 — Automation
+
+Warranties and return deadlines per product (with source and verification
+status), the calendar, reminders and notifications sent by a scheduled backend
+job (Supabase cron / Vercel cron), not browser timers.
 
 ---
 

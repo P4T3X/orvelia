@@ -69,3 +69,43 @@ describe("productFiltersSchema", () => {
     expect(normalizeSearch("Ñandú")).toBe("nandu");
   });
 });
+
+import { documentUploadSchema, receiptConfirmSchema } from "./receipt";
+
+describe("receiptConfirmSchema", () => {
+  const ok = {
+    merchant: "Tienda",
+    receiptNumber: "B001-1",
+    purchaseDate: "2026-03-14",
+    total: "1,338.00",
+    tax: "204.10",
+    currency: "PEN",
+    linkProductIds: [],
+    newProducts: [{ name: "Audífonos", price: "1199" }],
+  };
+
+  it("accepts and normalizes a confirmation", () => {
+    const r = receiptConfirmSchema.parse(ok);
+    expect(r.total).toBe("1338.00");
+    expect(r.newProducts[0]?.price).toBe("1199.00");
+  });
+
+  it("rejects tax greater than total", () => {
+    expect(receiptConfirmSchema.safeParse({ ...ok, tax: "2000" }).success).toBe(false);
+  });
+
+  it("allows every field empty (manual entry later)", () => {
+    const r = receiptConfirmSchema.parse({ ...ok, merchant: "", receiptNumber: "", purchaseDate: "", total: "", tax: "", newProducts: [] });
+    expect(r).toMatchObject({ merchant: null, total: null, tax: null, purchaseDate: null });
+  });
+
+  it("rejects new products without name", () => {
+    expect(receiptConfirmSchema.safeParse({ ...ok, newProducts: [{ name: " ", price: "" }] }).success).toBe(false);
+  });
+});
+
+describe("documentUploadSchema", () => {
+  it("accepts future expiry dates", () => {
+    expect(documentUploadSchema.safeParse({ title: "Póliza", documentType: "insurance", productId: "", expiresOn: "2030-01-01" }).success).toBe(true);
+  });
+});

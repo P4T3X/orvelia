@@ -26,3 +26,15 @@ export const EXTENSION_FOR: Record<"image/jpeg" | "image/png" | "image/webp", st
   "image/png": "png",
   "image/webp": "webp",
 };
+
+export type UploadType = "image/jpeg" | "image/png" | "image/webp" | "application/pdf";
+
+/** Images plus PDF ("%PDF-" header). */
+export function sniffUploadType(bytes: Uint8Array): UploadType | null {
+  const image = sniffImageType(bytes);
+  if (image) return image;
+  if (bytes.length >= 5 && String.fromCharCode(...bytes.slice(0, 5)) === "%PDF-") return "application/pdf";
+  return null;
+}
+
+export const UPLOAD_EXTENSION: Record<UploadType, string> = { ...EXTENSION_FOR, "application/pdf": "pdf" };

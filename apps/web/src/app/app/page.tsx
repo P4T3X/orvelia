@@ -7,6 +7,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { getProfile, requireUser } from "@/lib/auth";
 import { getDashboardData } from "@/lib/dashboard";
+import { listReceipts } from "@/lib/receipts";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Inicio" };
@@ -33,7 +34,10 @@ export default async function HomePage({
   const user = await requireUser("/app");
   const profile = await getProfile(user.id);
   const timeZone = profile?.timezone ?? "America/Lima";
-  const data = await getDashboardData(user.id, timeZone);
+  const [data, toReview] = await Promise.all([
+    getDashboardData(user.id, timeZone),
+    listReceipts(user.id, { status: ["needs_review", "failed", "uploaded"], limit: 5 }),
+  ]);
   const { password } = await searchParams;
   const firstName = profile?.full_name?.split(" ")[0];
 
@@ -76,6 +80,21 @@ export default async function HomePage({
           </>
         }
       />
+
+      {toReview.length > 0 && (
+        <Link
+          href={toReview.length === 1 ? `/app/scanner/${toReview[0]!.id}` : "/app/scanner"}
+          className="mb-6 flex items-center justify-between gap-4 rounded-xl border border-accent/50 bg-accent/5 px-5 py-4 hover:bg-accent/10"
+        >
+          <span>
+            <span className="block font-medium">
+              {toReview.length === 1 ? "Tienes 1 comprobante por revisar" : `Tienes ${toReview.length} comprobantes por revisar`}
+            </span>
+            <span className="block text-sm text-muted-foreground">Confírmalos para registrar tus compras.</span>
+          </span>
+          <span className="text-sm font-medium">Revisar</span>
+        </Link>
+      )}
 
       <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border lg:grid-cols-4">
         {stats.map((s) => (

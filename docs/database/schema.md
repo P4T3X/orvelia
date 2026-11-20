@@ -3,6 +3,7 @@
 Migrations:
 - `supabase/migrations/20261120000000_initial_schema.sql` — Phase 0–1
 - `supabase/migrations/20261121000000_products_phase2.sql` — Phase 2
+- `supabase/migrations/20261122000000_documents_phase3.sql` — Phase 3
 
 Status: **proposed — review before applying.**
 
@@ -72,9 +73,28 @@ Serve files only through short-lived signed URLs.
   rejected again when the subscription is `past_due`; accent-insensitive search;
   foreign image paths rejected; another user's category rejected by RLS.
 
+## Phase 3 additions
+
+- **Receipt ↔ product**: `receipts.product_id` was replaced by `products.receipt_id`
+  (composite FK to `receipts(id, user_id)`, `on delete set null`): one receipt can
+  cover several products; each product has at most one purchase receipt.
+- `receipts`: `mime_type`, `size_bytes`, `field_sources` (`extracted`/`manual` per
+  confirmed field), storage path must start with `{user_id}/receipts/`, and
+  `processing_status = 'confirmed'` ⇔ `confirmed_at is not null`.
+  The raw validated extraction stays in `receipts.extraction` for traceability;
+  the columns are only written on confirmation.
+- `documents`: storage path must start with `{user_id}/documents/`; MIME allow-list.
+- **Scan quota**: `reserve_scan(receipt_id, provider)` (checks `plan_limits.scans_per_month`
+  for the user's month in their time zone, per-user advisory lock, raises
+  `scan_limit_reached`) and `finish_scan(usage_id, succeeded)`. Failed scans and
+  reservations older than 15 minutes don't count. `scan_usage()` for the UI.
+  Internal helpers (`scans_used_this_month`, `current_plan_limits`) are not callable by users.
+- Verified on PostgreSQL 16 (`supabase/tests/phase3_documents.sql`).
+
 ## Open questions for review
 
 1. Initial `storage_mb` and `ai_queries_per_month` values per plan are placeholders.
 2. ~~User categories in V1?~~ Implemented in Phase 2 (create inline, delete in Settings).
 4. Should archived/sold products count toward the Free limit? Currently all statuses count.
+5. Scan quota resets on the 1st of each month in the user's time zone; should it follow the billing period for paid plans instead?
 3. Payment provider for Peru (affects `subscriptions.provider` values and webhooks).

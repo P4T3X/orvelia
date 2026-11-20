@@ -15,6 +15,16 @@
 - **Security headers** (HSTS, X-Frame-Options DENY, nosniff, Referrer-Policy, Permissions-Policy).
 - **Private storage bucket** with per-user folder policies, size and MIME limits.
 
+- **Uploads**: size checked before reading; type decided by file signature
+  (JPEG/PNG/WEBP/`%PDF-`), never by the browser's MIME type or extension;
+  bucket MIME/size limits as a second barrier; images re-encoded client-side
+  (removes EXIF/GPS).
+- **Private files** are opened through `/app/files/{receipt|document}/{id}`, which
+  checks ownership and redirects to a ≤2-minute signed URL (`Cache-Control: no-store`).
+- **AI output is untrusted**: validated with Zod, sanitized deterministically,
+  shown for confirmation, and never written to the record's columns without it.
+- **Quotas** (products, scans) are enforced in Postgres, not in the UI.
+
 ## Supabase dashboard settings to configure
 
 - Auth → Email: **Confirm email ON**, secure password change ON.
@@ -33,5 +43,5 @@
 - Data export.
 - Content-Security-Policy with nonces.
 - Audit log table (`activity_logs`) for security events.
-- Rate limiting on scanner / AI endpoints (Phase 3/5).
+- Per-minute rate limiting on uploads and AI calls (monthly quotas exist; burst limits pending).
 - Sentry error monitoring.

@@ -30,6 +30,7 @@ export type ProductDetail = ProductListItem & {
   seller: string | null;
   serialNumber: string | null;
   imagePath: string | null;
+  receiptId: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -135,7 +136,7 @@ export async function getProduct(userId: string, id: string): Promise<ProductDet
   const { data: r, error } = await supabase
     .from("products")
     .select(
-      "id, name, brand, model, status, category_id, description, notes, purchase_date, purchase_price, currency, seller, serial_number, image_path, created_at, updated_at, categories(name)",
+      "id, name, brand, model, status, category_id, description, notes, purchase_date, purchase_price, currency, seller, serial_number, image_path, receipt_id, created_at, updated_at, categories(name)",
     )
     .eq("user_id", userId)
     .eq("id", id)
@@ -161,6 +162,7 @@ export async function getProduct(userId: string, id: string): Promise<ProductDet
     seller: r.seller,
     serialNumber: r.serial_number,
     imagePath: r.image_path,
+    receiptId: r.receipt_id,
     imageUrl: r.image_path ? (urls.get(r.image_path) ?? null) : null,
     createdAt: r.created_at,
     updatedAt: r.updated_at,

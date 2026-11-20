@@ -9,6 +9,8 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 type PlanId = "free" | "plus" | "ultra";
+type ProcessingStatus = "uploaded" | "processing" | "needs_review" | "confirmed" | "failed";
+type DocumentType = "receipt" | "invoice" | "warranty" | "manual" | "insurance" | "certificate" | "other";
 type ProductStatus = "active" | "sold" | "gifted" | "archived" | "disposed";
 type VerificationStatus = "extracted" | "manual" | "confirmed" | "needs_verification";
 
@@ -79,6 +81,7 @@ export type Database = {
           seller: string | null;
           serial_number: string | null;
           image_path: string | null;
+          receipt_id: string | null;
           status: ProductStatus;
           search_text: string;
           created_at: string;
@@ -99,6 +102,7 @@ export type Database = {
           seller?: string | null;
           serial_number?: string | null;
           image_path?: string | null;
+          receipt_id?: string | null;
           status?: ProductStatus;
         };
         Update: {
@@ -114,6 +118,7 @@ export type Database = {
           seller?: string | null;
           serial_number?: string | null;
           image_path?: string | null;
+          receipt_id?: string | null;
           status?: ProductStatus;
         };
         Relationships: [
@@ -132,12 +137,92 @@ export type Database = {
         Update: { name?: string; icon?: string | null };
         Relationships: [];
       };
-      receipts: ReadOnly<{
-        id: string;
-        user_id: string;
-        processing_status: "uploaded" | "processing" | "needs_review" | "confirmed" | "failed";
-        created_at: string;
-      }>;
+      receipts: {
+        Row: {
+          id: string;
+          user_id: string;
+          merchant: string | null;
+          receipt_number: string | null;
+          purchase_date: string | null;
+          total_amount: number | null;
+          tax_amount: number | null;
+          currency: string | null;
+          storage_path: string | null;
+          mime_type: string | null;
+          size_bytes: number | null;
+          processing_status: ProcessingStatus;
+          extraction: Json | null;
+          processing_error: string | null;
+          field_sources: Json;
+          confirmed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string;
+          storage_path?: string | null;
+          mime_type?: string | null;
+          size_bytes?: number | null;
+          processing_status?: ProcessingStatus;
+        };
+        Update: {
+          merchant?: string | null;
+          receipt_number?: string | null;
+          purchase_date?: string | null;
+          total_amount?: number | string | null;
+          tax_amount?: number | string | null;
+          currency?: string | null;
+          processing_status?: ProcessingStatus;
+          extraction?: Json | null;
+          processing_error?: string | null;
+          field_sources?: Json;
+          confirmed_at?: string | null;
+        };
+        Relationships: [];
+      };
+      documents: {
+        Row: {
+          id: string;
+          user_id: string;
+          product_id: string | null;
+          document_type: DocumentType;
+          title: string;
+          storage_path: string;
+          mime_type: string | null;
+          size_bytes: number | null;
+          expires_on: string | null;
+          metadata: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string;
+          product_id?: string | null;
+          document_type: DocumentType;
+          title: string;
+          storage_path: string;
+          mime_type?: string | null;
+          size_bytes?: number | null;
+          expires_on?: string | null;
+        };
+        Update: {
+          product_id?: string | null;
+          document_type?: DocumentType;
+          title?: string;
+          expires_on?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "documents_product_fk";
+            columns: ["product_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
       warranties: {
         Row: {
           id: string;
@@ -181,6 +266,12 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      reserve_scan: { Args: { p_receipt_id: string; p_provider: string }; Returns: string };
+      finish_scan: { Args: { p_usage_id: string; p_succeeded: boolean }; Returns: undefined };
+      scan_usage: {
+        Args: Record<string, never>;
+        Returns: { used: number; scans_per_month: number; plan: PlanId }[];
+      };
       product_usage: {
         Args: Record<string, never>;
         Returns: { used: number; max_products: number | null; plan: PlanId }[];
@@ -189,6 +280,8 @@ export type Database = {
     Enums: {
       plan_id: PlanId;
       product_status: ProductStatus;
+      processing_status: ProcessingStatus;
+      document_type: DocumentType;
       verification_status: VerificationStatus;
     };
     CompositeTypes: { [_ in never]: never };
