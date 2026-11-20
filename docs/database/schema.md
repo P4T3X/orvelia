@@ -1,6 +1,9 @@
 # Database schema — review notes
 
-Migration: `supabase/migrations/20261120000000_initial_schema.sql`
+Migrations:
+- `supabase/migrations/20261120000000_initial_schema.sql` — Phase 0–1
+- `supabase/migrations/20261121000000_products_phase2.sql` — Phase 2
+
 Status: **proposed — review before applying.**
 
 The migration was verified against PostgreSQL 16 with Supabase-like `auth` /
@@ -54,8 +57,24 @@ Private bucket `user-files` (10 MB, JPEG/PNG/WEBP/HEIC/PDF). Object paths must
 begin with the owner's id: `{user_id}/{receipts|documents|products}/{uuid}.{ext}`.
 Serve files only through short-lived signed URLs.
 
+## Phase 2 additions
+
+- `products.search_text`: generated, lower-cased and accent-folded (`translate`)
+  text of name, brand, model, serial and seller, with a `pg_trgm` GIN index.
+  The app folds the search term the same way (`normalizeSearch`).
+- `products_image_path_owner` check: an image path must start with `{user_id}/products/`.
+- `enforce_product_limit` trigger (before insert): reads the user's active
+  subscription and `plan_limits.max_products`; `past_due`/`canceled` fall back
+  to Free. Uses a per-user advisory lock so concurrent inserts can't exceed the
+  limit. Raises `product_limit_reached`. Products of any status count toward the limit.
+- `product_usage()` (security invoker): `{used, max_products, plan}` for the UI.
+- Verified on PostgreSQL 16: 11th product rejected on Free, allowed on Plus,
+  rejected again when the subscription is `past_due`; accent-insensitive search;
+  foreign image paths rejected; another user's category rejected by RLS.
+
 ## Open questions for review
 
 1. Initial `storage_mb` and `ai_queries_per_month` values per plan are placeholders.
-2. Should users be able to create their own categories in V1, or only use system ones?
+2. ~~User categories in V1?~~ Implemented in Phase 2 (create inline, delete in Settings).
+4. Should archived/sold products count toward the Free limit? Currently all statuses count.
 3. Payment provider for Peru (affects `subscriptions.provider` values and webhooks).

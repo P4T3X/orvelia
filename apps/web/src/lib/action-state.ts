@@ -1,13 +1,14 @@
 import type { z } from "zod";
 
 /** Uniform result shape for server actions consumed by forms. */
-export type ActionState = {
+export type ActionState<T = undefined> = {
   ok: boolean;
   message?: string;
   fieldErrors?: Record<string, string>;
+  data?: T;
 };
 
-export function fromZodError(error: z.ZodError): ActionState {
+export function fromZodError(error: z.ZodError): ActionState<never> {
   const fieldErrors: Record<string, string> = {};
   for (const issue of error.issues) {
     const key = issue.path.join(".");

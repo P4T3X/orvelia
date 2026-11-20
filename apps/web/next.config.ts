@@ -16,6 +16,10 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // Shared workspace packages ship TypeScript source.
   transpilePackages: ["@orvelia/domain", "@orvelia/schemas"],
+  experimental: {
+    // Product images are capped at 5 MB in validation; leave room for multipart overhead.
+    serverActions: { bodySizeLimit: "6mb" },
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

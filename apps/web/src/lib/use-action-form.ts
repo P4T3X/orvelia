@@ -13,7 +13,7 @@ import type { ActionState } from "@/lib/action-state";
 export function useActionForm<TSchema extends z.ZodType<FieldValues, FieldValues>>(
   schema: TSchema,
   defaultValues: DefaultValues<z.input<TSchema>>,
-  action: (values: z.input<TSchema>) => Promise<ActionState | void>,
+  action: (values: z.input<TSchema>) => Promise<ActionState<unknown> | void>,
 ) {
   const form = useForm<z.input<TSchema>, unknown, z.output<TSchema>>({
     resolver: zodResolver(schema),
@@ -21,7 +21,7 @@ export function useActionForm<TSchema extends z.ZodType<FieldValues, FieldValues
     mode: "onTouched",
   });
   const [pending, startTransition] = React.useTransition();
-  const [result, setResult] = React.useState<ActionState | null>(null);
+  const [result, setResult] = React.useState<ActionState<unknown> | null>(null);
 
   const onSubmit = form.handleSubmit(() => {
     setResult(null);

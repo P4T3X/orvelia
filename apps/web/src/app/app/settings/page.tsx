@@ -4,9 +4,11 @@ import Link from "next/link";
 import { signOut } from "@/app/(auth)/actions";
 import { PageHeader } from "@/components/app/page-header";
 import { ProfileForm } from "@/components/app/profile-form";
+import { CategoriesManager } from "@/components/products/categories-manager";
 import { ThemeToggle } from "@/components/theme";
 import { Button } from "@/components/ui/button";
 import { getProfile, requireUser } from "@/lib/auth";
+import { listCategories } from "@/lib/products";
 
 export const metadata: Metadata = { title: "Ajustes" };
 
@@ -24,7 +26,7 @@ function Section({ title, description, children }: { title: string; description:
 
 export default async function SettingsPage() {
   const user = await requireUser("/app/settings");
-  const profile = await getProfile(user.id);
+  const [profile, categories] = await Promise.all([getProfile(user.id), listCategories(user.id)]);
 
   const lang = (SUPPORTED_LANGUAGES as readonly string[]).includes(profile?.preferred_language ?? "")
     ? (profile!.preferred_language as SupportedLanguage)
@@ -45,6 +47,13 @@ export default async function SettingsPage() {
             preferredCurrency: currency,
             timezone: profile?.timezone ?? "America/Lima",
           }}
+        />
+      </Section>
+
+      <Section title="Categorías" description="Organiza tu colección con categorías propias.">
+        <CategoriesManager
+          own={categories.filter((c) => c.own).map((c) => ({ id: c.id, name: c.name }))}
+          systemCount={categories.filter((c) => !c.own).length}
         />
       </Section>
 

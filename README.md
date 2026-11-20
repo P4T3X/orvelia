@@ -3,8 +3,8 @@
 Personal Ownership Management — *Todo lo que posees. Un solo espacio inteligente.*
 
 Web-first, mobile-ready platform built with Next.js 16 + Supabase. This
-repository currently covers **Phase 0 (foundation)** and **Phase 1 (brand and
-web foundation)** of the master technical document.
+repository currently covers **Phase 0 (foundation)**, **Phase 1 (brand and web
+foundation)** and **Phase 2 (ownership management)** of the master technical document.
 
 ## What's in Phase 0–1
 
@@ -19,6 +19,18 @@ web foundation)** of the master technical document.
 | `/app` dashboard with real counts, upcoming deadlines, onboarding checklist | ✅ |
 | `/app/settings` profile (name, language, currency, time zone), `/app/billing` plan + limits | ✅ |
 | Products, scanner, documents, calendar, assistant | Honest placeholders → Phases 2–5 |
+
+## What's in Phase 2
+
+| Area | Status |
+|---|---|
+| Product create / edit / delete (with confirmation) and status changes | ✅ |
+| Categories: 11 system categories + user categories (inline creation, management in Settings) | ✅ |
+| Accent-insensitive search (name, brand, model, serial, seller), status/category filters, 4 sort orders, pagination — all in the URL | ✅ |
+| Product detail page | ✅ |
+| Product photos in the private bucket: resized in the browser (EXIF/GPS stripped), file signature checked on the server, short-lived signed URLs, cleaned up on replace/delete | ✅ |
+| Free plan limit (10 products) enforced by a database trigger reading `plan_limits`, plus UI usage meter | ✅ |
+| Receipts, documents, warranties per product | Placeholders on the detail page → Phases 3–4 |
 
 ## Getting started
 
@@ -62,8 +74,8 @@ setup notice.
 | `pnpm lint` | ESLint (web) + type checks (packages) |
 | `pnpm test` | Unit tests (shared Zod schemas) |
 
-RLS smoke test (against a local DB with the migration applied):
-`psql "$DB_URL" -f supabase/tests/rls_smoke.sql`
+SQL smoke tests (against a local DB with the migrations applied):
+`psql "$DB_URL" -f supabase/tests/rls_smoke.sql` and `supabase/tests/phase2_products.sql`
 
 ## Deploying to Vercel
 
@@ -76,11 +88,11 @@ from `.env.example`. Vercel detects pnpm workspaces automatically.
 - `docs/database/schema.md` — schema review notes and open questions
 - `docs/security/` — security baseline and pending items
 
-## Next: Phase 2 — Ownership management
+## Next: Phase 3 — Document intelligence
 
-Product CRUD, categories, search and filters, product detail page and product
-images in the private bucket, with backend enforcement of the Free plan's
-10-product limit.
+Private uploads of receipts and documents, a provider-independent OCR/extraction
+layer with Zod-validated output, the editable confirmation screen (nothing saved
+without the user's confirmation) and linking receipts/documents to products.
 
 ---
 
