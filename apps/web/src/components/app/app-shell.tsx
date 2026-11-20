@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Menu, X } from "lucide-react";
+import { Bell, LogOut, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
@@ -12,6 +12,24 @@ import { cn } from "@/lib/utils";
 import { primaryNav, secondaryNav, type NavItem } from "./nav-items";
 
 type ShellUser = { name: string; email: string };
+
+function BellLink({ unread, pathname }: { unread: number; pathname: string }) {
+  return (
+    <Link
+      href="/app/notifications"
+      aria-label={unread > 0 ? `Avisos, ${unread} sin leer` : "Avisos"}
+      aria-current={pathname === "/app/notifications" ? "page" : undefined}
+      className="relative inline-flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground aria-[current=page]:text-foreground"
+    >
+      <Bell className="size-[18px]" aria-hidden strokeWidth={1.75} />
+      {unread > 0 && (
+        <span className="absolute right-1 top-1 flex min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold leading-4 text-[#111315]">
+          {unread > 9 ? "9+" : unread}
+        </span>
+      )}
+    </Link>
+  );
+}
 
 function isActive(pathname: string, item: NavItem) {
   return item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -91,7 +109,7 @@ function SidebarContent({ user, pathname }: { user: ShellUser; pathname: string 
   );
 }
 
-export function AppShell({ user, children }: { user: ShellUser; children: React.ReactNode }) {
+export function AppShell({ user, unread, children }: { user: ShellUser; unread: number; children: React.ReactNode }) {
   const pathname = usePathname();
   const [drawerFor, setDrawerFor] = React.useState<string | null>(null);
   const drawerOpen = drawerFor === pathname;
@@ -111,8 +129,9 @@ export function AppShell({ user, children }: { user: ShellUser; children: React.
     <div className="min-h-dvh lg:grid lg:grid-cols-[17rem_1fr]">
       {/* Desktop sidebar */}
       <aside className="sticky top-0 hidden h-dvh flex-col border-r border-border bg-surface lg:flex">
-        <div className="flex h-16 items-center px-6">
+        <div className="flex h-16 items-center justify-between pl-6 pr-3">
           <Logo href="/app" />
+          <BellLink unread={unread} pathname={pathname} />
         </div>
         <SidebarContent user={user} pathname={pathname} />
       </aside>
@@ -120,16 +139,19 @@ export function AppShell({ user, children }: { user: ShellUser; children: React.
       {/* Mobile top bar */}
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur-md lg:hidden">
         <Logo href="/app" />
-        <Button
+        <div className="flex items-center gap-1">
+          <BellLink unread={unread} pathname={pathname} />
+          <Button
           variant="ghost"
           size="icon"
           aria-label="Abrir menú"
           aria-expanded={drawerOpen}
           aria-controls="app-drawer"
           onClick={() => setDrawerFor(pathname)}
-        >
-          <Menu />
-        </Button>
+          >
+            <Menu />
+          </Button>
+        </div>
       </header>
 
       {/* Mobile drawer */}

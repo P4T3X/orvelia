@@ -1,16 +1,19 @@
-import { ChevronLeft, FileText, FileUp, Receipt, ScanLine, ShieldCheck } from "lucide-react";
+import { ChevronLeft, FileText, FileUp, Receipt, ScanLine } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DocumentList } from "@/components/documents/document-list";
 import { ProductActions } from "@/components/products/product-actions";
+import { ProtectionSection } from "@/components/products/protection-section";
 import { ReceiptStatus } from "@/components/scanner/receipt-status";
 import { Button } from "@/components/ui/button";
 import { ProductThumb } from "@/components/products/product-thumb";
 import { StatusBadge } from "@/components/products/status-badge";
 import { getProfile, requireUser } from "@/lib/auth";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
+import { todayIn } from "@/lib/dashboard";
 import { listDocuments } from "@/lib/documents";
+import { getProductProtection } from "@/lib/protection";
 import { getProduct } from "@/lib/products";
 import { createClient } from "@/lib/supabase/server";
 import { isUuid } from "@/lib/utils";
@@ -36,27 +39,17 @@ function Fact({ label, children, mono }: { label: string; children: React.ReactN
   );
 }
 
-function Upcoming({ icon: Icon, title, body }: { icon: typeof FileText; title: string; body: string }) {
-  return (
-    <div className="flex gap-4 rounded-xl border border-dashed border-border-strong p-5">
-      <Icon className="mt-0.5 size-5 shrink-0 text-muted-foreground" aria-hidden strokeWidth={1.5} />
-      <div>
-        <p className="font-medium">{title}</p>
-        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{body}</p>
-      </div>
-    </div>
-  );
-}
-
 export default async function ProductPage({ params }: Props) {
   const { id } = await params;
   if (!isUuid(id)) notFound();
   const user = await requireUser(`/app/products/${id}`);
-  const [product, profile, documents] = await Promise.all([
+  const [product, profile, allDocuments, protection] = await Promise.all([
     getProduct(user.id, id),
     getProfile(user.id),
-    listDocuments(user.id, { productId: id }),
+    listDocuments(user.id, { limit: 200 }),
+    getProductProtection(user.id, id),
   ]);
+  const documents = allDocuments.filter((d) => d.productId === id);
   if (!product) notFound();
 
   const supabase = await createClient();
@@ -184,13 +177,14 @@ export default async function ProductPage({ params }: Props) {
         </div>
       </section>
 
-      <section className="mt-10">
-        <Upcoming
-          icon={ShieldCheck}
-          title="Garantía y devolución"
-          body="Pronto podrás registrar la garantía y el plazo de devolución, y recibir avisos antes de que venzan."
-        />
-      </section>
+      <ProtectionSection
+        productId={product.id}
+        warranties={protection.warranties}
+        returns={protection.returns}
+        documents={allDocuments.map((d) => ({ id: d.id, title: d.title }))}
+        today={todayIn(profile?.timezone ?? "America/Lima")}
+        timeZone={profile?.timezone ?? "America/Lima"}
+      />
 
       <p className="mt-10 text-[13px] text-muted-foreground">
         Registrado el {formatDateTime(product.createdAt, profile?.timezone)} · Última edición{" "}

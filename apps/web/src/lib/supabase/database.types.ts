@@ -11,6 +11,10 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 type PlanId = "free" | "plus" | "ultra";
 type ProcessingStatus = "uploaded" | "processing" | "needs_review" | "confirmed" | "failed";
 type DocumentType = "receipt" | "invoice" | "warranty" | "manual" | "insurance" | "certificate" | "other";
+type WarrantyKind = "manufacturer" | "store" | "extended" | "other";
+type ReminderStatus = "scheduled" | "sent" | "dismissed" | "cancelled" | "failed";
+type ReminderSource = "warranty" | "return" | "document" | "custom";
+type Recurrence = "none" | "monthly" | "quarterly" | "semiannual" | "yearly";
 type ProductStatus = "active" | "sold" | "gifted" | "archived" | "disposed";
 type VerificationStatus = "extracted" | "manual" | "confirmed" | "needs_verification";
 
@@ -228,17 +232,49 @@ export type Database = {
           id: string;
           user_id: string;
           product_id: string;
+          kind: WarrantyKind;
+          provider: string | null;
+          start_date: string | null;
           end_date: string | null;
+          coverage_description: string | null;
+          source_document_id: string | null;
+          verification_status: VerificationStatus;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          product_id: string;
+          kind: WarrantyKind;
+          provider: string | null;
+          start_date: string | null;
+          end_date: string | null;
+          coverage_description: string | null;
+          source_document_id: string | null;
           verification_status: VerificationStatus;
         };
-        Insert: Record<string, never>;
-        Update: Record<string, never>;
+        Update: {
+          kind?: WarrantyKind;
+          provider?: string | null;
+          start_date?: string | null;
+          end_date?: string | null;
+          coverage_description?: string | null;
+          source_document_id?: string | null;
+          verification_status?: VerificationStatus;
+        };
         Relationships: [
           {
             foreignKeyName: "warranties_product_fk";
             columns: ["product_id", "user_id"];
             isOneToOne: false;
             referencedRelation: "products";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "warranties_document_fk";
+            columns: ["source_document_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "documents";
             referencedColumns: ["id", "user_id"];
           },
         ];
@@ -249,10 +285,26 @@ export type Database = {
           user_id: string;
           product_id: string;
           deadline_date: string;
+          policy_details: string | null;
+          source_document_id: string | null;
+          verification_status: VerificationStatus;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          product_id: string;
+          deadline_date: string;
+          policy_details: string | null;
+          source_document_id: string | null;
           verification_status: VerificationStatus;
         };
-        Insert: Record<string, never>;
-        Update: Record<string, never>;
+        Update: {
+          deadline_date?: string;
+          policy_details?: string | null;
+          source_document_id?: string | null;
+          verification_status?: VerificationStatus;
+        };
         Relationships: [
           {
             foreignKeyName: "return_deadlines_product_fk";
@@ -261,11 +313,128 @@ export type Database = {
             referencedRelation: "products";
             referencedColumns: ["id", "user_id"];
           },
+          {
+            foreignKeyName: "return_deadlines_document_fk";
+            columns: ["source_document_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "documents";
+            referencedColumns: ["id", "user_id"];
+          },
         ];
+      };
+      reminders: {
+        Row: {
+          id: string;
+          user_id: string;
+          product_id: string | null;
+          title: string;
+          description: string | null;
+          scheduled_at: string;
+          status: ReminderStatus;
+          notification_channels: string[];
+          sent_at: string | null;
+          source: ReminderSource;
+          source_id: string | null;
+          lead_days: number | null;
+          recurrence: Recurrence;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          product_id: string | null;
+          title: string;
+          description: string | null;
+          scheduled_at: string;
+          notification_channels: string[];
+          recurrence: Recurrence;
+          source?: "custom";
+          status?: "scheduled";
+        };
+        Update: {
+          title?: string;
+          description?: string | null;
+          scheduled_at?: string;
+          status?: ReminderStatus;
+          notification_channels?: string[];
+          recurrence?: Recurrence;
+          product_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "reminders_product_fk";
+            columns: ["product_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
+      notification_preferences: {
+        Row: {
+          user_id: string;
+          email_enabled: boolean;
+          warranty_lead_days: number[];
+          return_lead_days: number[];
+          document_lead_days: number[];
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          email_enabled: boolean;
+          warranty_lead_days: number[];
+          return_lead_days: number[];
+          document_lead_days: number[];
+        };
+        Update: {
+          email_enabled?: boolean;
+          warranty_lead_days?: number[];
+          return_lead_days?: number[];
+          document_lead_days?: number[];
+        };
+        Relationships: [];
+      };
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          reminder_id: string | null;
+          title: string;
+          body: string | null;
+          link: string | null;
+          email_status: "sent" | "skipped" | "failed" | "not_requested";
+          read_at: string | null;
+          created_at: string;
+        };
+        Insert: Record<string, never>;
+        Update: { read_at?: string | null };
+        Relationships: [];
       };
     };
     Views: { [_ in never]: never };
     Functions: {
+      resync_my_reminders: { Args: Record<string, never>; Returns: number };
+      claim_due_reminders: {
+        Args: { p_limit: number };
+        Returns: {
+          id: string;
+          user_id: string;
+          email: string | null;
+          full_name: string | null;
+          title: string;
+          description: string | null;
+          product_id: string | null;
+          source: ReminderSource;
+          channels: string[];
+          email_enabled: boolean;
+          attempts: number;
+          scheduled_at: string;
+        }[];
+      };
+      complete_reminder: {
+        Args: { p_id: string; p_email_status: string; p_error?: string | null; p_retry?: boolean };
+        Returns: undefined;
+      };
       reserve_scan: { Args: { p_receipt_id: string; p_provider: string }; Returns: string };
       finish_scan: { Args: { p_usage_id: string; p_succeeded: boolean }; Returns: undefined };
       scan_usage: {

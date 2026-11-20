@@ -25,6 +25,13 @@
   shown for confirmation, and never written to the record's columns without it.
 - **Quotas** (products, scans) are enforced in Postgres, not in the UI.
 
+- **Scheduled job**: `/api/cron/reminders` requires `Authorization: Bearer $CRON_SECRET`
+  (constant-time comparison). It is the only code path that uses the service-role
+  key, and it only calls the two delivery functions, which are not executable by
+  users.
+- **Emails** carry no sensitive data beyond the reminder title; links point to
+  the authenticated app.
+
 ## Supabase dashboard settings to configure
 
 - Auth → Email: **Confirm email ON**, secure password change ON.

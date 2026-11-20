@@ -4,6 +4,7 @@ Migrations:
 - `supabase/migrations/20261120000000_initial_schema.sql` — Phase 0–1
 - `supabase/migrations/20261121000000_products_phase2.sql` — Phase 2
 - `supabase/migrations/20261122000000_documents_phase3.sql` — Phase 3
+- `supabase/migrations/20261123000000_automation_phase4.sql` — Phase 4
 
 Status: **proposed — review before applying.**
 
@@ -91,10 +92,30 @@ Serve files only through short-lived signed URLs.
   Internal helpers (`scans_used_this_month`, `current_plan_limits`) are not callable by users.
 - Verified on PostgreSQL 16 (`supabase/tests/phase3_documents.sql`).
 
+## Phase 4 additions
+
+- `warranties.kind` (manufacturer / store / extended / other).
+- `reminders`: `source` (`warranty` / `return` / `document` / `custom`), `source_id`,
+  `lead_days`, `recurrence` (custom only), and delivery bookkeeping
+  (`claimed_at`, `attempts`, `last_error`). Users can insert **custom** reminders
+  only and update only user-facing columns (column-level grants).
+- `sync_auto_reminders(source, id)` + triggers on `warranties`, `return_deadlines`,
+  `documents` and product renames: pending automatic reminders are rebuilt from
+  the record and the user's preferences; past lead times are skipped.
+  `resync_my_reminders()` rebuilds all of a user's (after changing preferences/time zone).
+- `notification_preferences` (email on/off, lead days per kind; validated 0–365, max 5).
+- `notifications` (in-app inbox): written only by the job; users can read,
+  mark read (`read_at` only) and delete their own.
+- Delivery API for the service role: `claim_due_reminders(limit)` (atomic,
+  `skip locked`, stale claims re-claimable after 10 min) and
+  `complete_reminder(id, email_status, error, retry)`.
+- Verified on PostgreSQL 16 (`supabase/tests/phase4_automation.sql`).
+
 ## Open questions for review
 
 1. Initial `storage_mb` and `ai_queries_per_month` values per plan are placeholders.
 2. ~~User categories in V1?~~ Implemented in Phase 2 (create inline, delete in Settings).
 4. Should archived/sold products count toward the Free limit? Currently all statuses count.
+6. Should automatic reminders also go out for products marked sold/gifted/disposed? Currently they do until the warranty/return is deleted.
 5. Scan quota resets on the 1st of each month in the user's time zone; should it follow the billing period for paid plans instead?
 3. Payment provider for Peru (affects `subscriptions.provider` values and webhooks).

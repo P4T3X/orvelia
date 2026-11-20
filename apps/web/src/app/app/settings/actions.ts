@@ -26,6 +26,9 @@ export async function updateProfile(input: unknown): Promise<ActionState> {
 
   if (error) return { ok: false, message: "No pudimos guardar los cambios. Inténtalo de nuevo." };
 
+  // Automatic reminders fire at 09:00 local time: re-time them if the time zone changed.
+  await supabase.rpc("resync_my_reminders");
+
   revalidatePath("/app", "layout");
   return { ok: true, message: "Cambios guardados." };
 }

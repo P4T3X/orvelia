@@ -4,8 +4,8 @@ Personal Ownership Management — *Todo lo que posees. Un solo espacio inteligen
 
 Web-first, mobile-ready platform built with Next.js 16 + Supabase. This
 repository currently covers **Phase 0 (foundation)**, **Phase 1 (brand and web
-foundation)**, **Phase 2 (ownership management)** and **Phase 3 (document
-intelligence)** of the master technical document.
+foundation)**, **Phase 2 (ownership management)**, **Phase 3 (document
+intelligence)** and **Phase 4 (automation)** of the master technical document.
 
 ## What's in Phase 0–1
 
@@ -76,7 +76,7 @@ setup notice.
 | `pnpm test` | Unit tests (shared Zod schemas) |
 
 SQL smoke tests (against a local DB with the migrations applied):
-`supabase/tests/rls_smoke.sql`, `phase2_products.sql`, `phase3_documents.sql` (run with `psql "$DB_URL" -f …`)
+`supabase/tests/rls_smoke.sql`, `phase2_products.sql`, `phase3_documents.sql`, `phase4_automation.sql` (run with `psql "$DB_URL" -f …`)
 
 ## Deploying to Vercel
 
@@ -116,11 +116,37 @@ Without these, the scanner still stores files and the user types the data.
 `ORVELIA_AI_PROVIDER=fixture` returns labeled test data for local development and
 is refused when `VERCEL_ENV=production`.
 
-## Next: Phase 4 — Automation
+## What's in Phase 4
 
-Warranties and return deadlines per product (with source and verification
-status), the calendar, reminders and notifications sent by a scheduled backend
-job (Supabase cron / Vercel cron), not browser timers.
+| Area | Status |
+|---|---|
+| Warranties per product: kind, provider, start/end, coverage, backing document, verification status (manual / confirmed / needs verification); time left and progress | ✅ |
+| Return deadlines with conditions, backing document and verification status | ✅ |
+| No assumed standard periods: only dates the user records | ✅ |
+| Automatic reminders generated **in Postgres triggers** when a warranty end, return deadline or document expiry is created/changed/deleted, at 09:00 in the user's time zone; product renames update titles | ✅ |
+| Lead times configurable in Settings (e.g. 30 and 7 days before), email on/off; changing them or the time zone re-times every pending reminder | ✅ |
+| Calendar: month grid + month agenda + scheduled reminders; manual and recurring reminders (maintenance: monthly → yearly) | ✅ |
+| Scheduled delivery job `/api/cron/reminders` (Vercel Cron, `CRON_SECRET`): atomic claim (`for update skip locked`), email through Resend with idempotency keys, 2 retries on transient failures, in-app notification always created, next occurrence for recurring reminders | ✅ |
+| In-app inbox `/app/notifications` and bell with unread count | ✅ |
+
+### Turning on delivery
+
+```
+SUPABASE_SERVICE_ROLE_KEY=<server only>
+CRON_SECRET=<random string; Vercel sends it to the cron route>
+RESEND_API_KEY=<from resend.com>          # optional: without it, in-app only
+EMAIL_FROM="ORVELIA <avisos@your-domain>" # a domain verified in Resend
+```
+
+`apps/web/vercel.ts` schedules the job daily at 14:00 UTC (09:00 Lima), which
+works on the Hobby plan. On Pro, change it to hourly (`0 * * * *`) so users in
+other time zones get reminders at their own 09:00.
+
+## Next: Phase 5 — ORVELIA AI
+
+Assistant over the user's own records: provider-independent AI service, context
+retrieval scoped by RLS, structured answers with links to records, no invented
+dates or amounts, and usage tracking against the plan.
 
 ---
 

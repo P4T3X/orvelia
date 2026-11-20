@@ -415,10 +415,12 @@ function ReviewForm({
           <h2 className="font-medium">Productos de este comprobante</h2>
           <ul className="divide-y divide-border rounded-lg border border-border">
             {receipt.linkedProducts.map((p) => (
-              <li key={p.id}>
-                <Link href={`/app/products/${p.id}`} className="flex items-center justify-between px-4 py-3 hover:bg-muted">
-                  <span>{p.name}</span>
-                  <span className="text-sm text-muted-foreground">Ver ficha</span>
+              <li key={p.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                <Link href={`/app/products/${p.id}`} className="min-w-0 truncate hover:underline">
+                  {p.name}
+                </Link>
+                <Link href={`/app/products/${p.id}#garantia`} className="shrink-0 text-sm text-muted-foreground hover:text-foreground">
+                  Registrar garantía
                 </Link>
               </li>
             ))}
