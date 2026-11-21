@@ -30,4 +30,10 @@ insert into public.products (name) values ('doce');
 select set_config('request.jwt.claim.sub','44444444-4444-4444-4444-444444444444',false);
 select 'D usage', * from public.product_usage();
 insert into public.categories (user_id, name) values ('44444444-4444-4444-4444-444444444444','Bicicletas') returning name;
-\echo [expect FAIL: use another user category]
+reset role;
+select id as d_cat from public.categories where name='Bicicletas' and user_id='44444444-4444-4444-4444-444444444444' \gset
+update public.subscriptions set status='active', plan='plus' where user_id='33333333-3333-3333-3333-333333333333';
+set role authenticated;
+select set_config('request.jwt.claim.sub','33333333-3333-3333-3333-333333333333',false) \g /dev/null
+\echo [expect FAIL: use a category of another user]
+insert into public.products (name, category_id) values ('Bici ajena', :'d_cat');

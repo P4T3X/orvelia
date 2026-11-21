@@ -4,8 +4,9 @@ set role authenticated;
 select set_config('request.jwt.claim.sub','aaaaaaaa-1111-4111-8111-111111111111',false) \g /dev/null
 select 'prices', plan, price_monthly, currency from public.plan_limits order by price_monthly;
 select 'overview free', effective_plan, status from public.billing_overview();
-\echo [expect FAIL: user writes own subscription]
+\echo [expect UPDATE 0: user cannot write own subscription]
 update public.subscriptions set plan='ultra';
+select 'still free', plan from public.subscriptions;
 \echo [expect FAIL: user inserts checkout]
 insert into public.billing_checkouts (user_id, plan, amount, currency) values ('aaaaaaaa-1111-4111-8111-111111111111','plus',1,'PEN');
 \echo [expect 0: user cannot read billing_events]

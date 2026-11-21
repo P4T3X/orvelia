@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { signOut } from "@/app/(auth)/actions";
 import { PageHeader } from "@/components/app/page-header";
+import { DeleteAccount, ExportData } from "@/components/app/account-data";
 import { ProfileForm } from "@/components/app/profile-form";
 import { NotificationPrefsForm } from "@/components/calendar/notification-prefs-form";
 import { CategoriesManager } from "@/components/products/categories-manager";
@@ -10,6 +11,7 @@ import { ThemeToggle } from "@/components/theme";
 import { Button } from "@/components/ui/button";
 import { getProfile, requireUser } from "@/lib/auth";
 import { isEmailConfigured } from "@/lib/email";
+import { getFamilyOverview } from "@/lib/family";
 import { listCategories } from "@/lib/products";
 import { createClient } from "@/lib/supabase/server";
 
@@ -30,10 +32,11 @@ function Section({ id, title, description, children }: { id?: string; title: str
 export default async function SettingsPage() {
   const user = await requireUser("/app/settings");
   const supabase = await createClient();
-  const [profile, categories, { data: prefs }] = await Promise.all([
+  const [profile, categories, { data: prefs }, family] = await Promise.all([
     getProfile(user.id),
     listCategories(user.id),
     supabase.from("notification_preferences").select("*").eq("user_id", user.id).maybeSingle(),
+    getFamilyOverview(),
   ]);
 
   const lang = (SUPPORTED_LANGUAGES as readonly string[]).includes(profile?.preferred_language ?? "")
@@ -95,6 +98,18 @@ export default async function SettingsPage() {
               Cerrar sesión
             </Button>
           </form>
+        </div>
+      </Section>
+
+      <Section id="datos" title="Tus datos" description="Descarga una copia de todo lo que guardas en ORVELIA o elimina tu cuenta.">
+        <div className="grid gap-8">
+          <ExportData />
+          <div className="grid gap-3 border-t border-border pt-6">
+            <p className="text-sm text-muted-foreground">Eliminar tu cuenta borra todo de forma permanente.</p>
+            <div>
+              <DeleteAccount email={user.email ?? ""} ownsFamily={family.family !== null && family.myRole === "owner"} />
+            </div>
+          </div>
         </div>
       </Section>
     </>

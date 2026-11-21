@@ -88,10 +88,10 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-border bg-border" role="grid" aria-label={`Calendario de ${title}`}>
-            <div className="grid grid-cols-7 gap-px" role="row">
+          <div className="overflow-hidden rounded-xl border border-border bg-border" role="group" aria-label={`Calendario de ${title}`}>
+            <div className="grid grid-cols-7 gap-px" aria-hidden>
               {WEEKDAYS.map((d) => (
-                <div key={d} role="columnheader" className="bg-surface px-2 py-2 text-center text-[12px] text-muted-foreground">
+                <div key={d} className="bg-surface px-2 py-2 text-center text-[12px] text-muted-foreground">
                   {d}
                 </div>
               ))}
@@ -104,11 +104,14 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
                 return (
                   <div
                     key={day}
-                    role="gridcell"
-                    aria-label={`${dayFmt.format(new Date(`${day}T12:00:00Z`))}${items.length ? `, ${items.length} eventos` : ""}`}
-                    className={cn("min-h-16 bg-surface-raised p-1.5 sm:min-h-24 sm:p-2", !inMonth && "bg-surface text-muted-foreground/60")}
+                    className={cn("min-h-16 bg-surface-raised p-1.5 sm:min-h-24 sm:p-2", !inMonth && "bg-surface text-muted-foreground")}
                   >
+                    <span className="sr-only">
+                      {dayFmt.format(new Date(`${day}T12:00:00Z`))}
+                      {items.length ? `, ${items.length} ${items.length === 1 ? "evento" : "eventos"}` : ""}
+                    </span>
                     <span
+                      aria-hidden
                       className={cn(
                         "inline-flex size-6 items-center justify-center rounded-full text-[12px] tabular-nums",
                         isToday && "bg-foreground font-medium text-background",
@@ -117,7 +120,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
                       {Number(day.slice(8))}
                     </span>
                     {/* Mobile: dots. Desktop: labels. */}
-                    <div className="mt-1 flex flex-wrap gap-1 sm:hidden">
+                    <div className="mt-1 flex flex-wrap gap-1 sm:hidden" aria-hidden>
                       {items.slice(0, 4).map((e) => (
                         <span key={e.key} className={cn("size-1.5 rounded-full", KIND[e.kind].dot)} />
                       ))}

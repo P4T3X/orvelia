@@ -28,7 +28,7 @@
   --primary: var(--graphite);
   --primary-foreground: var(--ivory);
   --accent: var(--gold);
-  --accent-ink: #8a6d36; /* gold tuned for text on light surfaces */
+  --accent-ink: #7a5f2c; /* gold tuned for text on light surfaces (≥ 5:1 on ivory, muted and tinted badges) */
   --ring: var(--gold);
   --danger: #a33a32;
   --danger-surface: #f7e9e6;

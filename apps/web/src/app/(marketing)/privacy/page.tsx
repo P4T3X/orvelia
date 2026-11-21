@@ -31,7 +31,7 @@ export default function PrivacyPage() {
         {
           heading: "Tus derechos",
           body: [
-            "Puedes acceder, rectificar, cancelar u oponerte al tratamiento de tus datos, así como exportarlos o eliminar tu cuenta, conforme a la Ley N.º 29733, Ley de Protección de Datos Personales del Perú, y su reglamento.",
+            "Puedes acceder, rectificar, cancelar u oponerte al tratamiento de tus datos, así como exportarlos o eliminar tu cuenta, conforme a la Ley N.º 29733, Ley de Protección de Datos Personales del Perú, y su reglamento. Puedes descargar tus datos o eliminar tu cuenta tú mismo en Ajustes, sección «Tus datos».",
           ],
         },
       ]}

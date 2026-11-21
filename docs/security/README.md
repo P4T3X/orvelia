@@ -54,6 +54,15 @@
   account. Shared files are signed by the server with the service role only after
   `shared_file_path()` authorizes the caller; storage policies stay owner-only.
 
+- **Phase 8 hardening**: a Content-Security-Policy (no `unsafe-eval`, no framing,
+  no plugins; scripts and connections limited to this origin and Supabase) on every
+  response. `supabase/tests/security_audit.sql` is a CI gate for RLS coverage,
+  definer-function exposure and search_path, trigger-function grants and FK indexes.
+  Account deletion cancels billing, removes files and deletes the auth user (all
+  data cascades); the data export reads only through the user's own session.
+  `/api/health` never returns configuration values unless called with
+  `CRON_SECRET`, and then only booleans.
+
 ## Supabase dashboard settings to configure
 
 - Auth → Email: **Confirm email ON**, secure password change ON.

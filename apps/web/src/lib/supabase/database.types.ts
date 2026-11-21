@@ -82,6 +82,12 @@ export type Database = {
         };
         Relationships: [];
       };
+      feedback: {
+        Row: { id: string; user_id: string; kind: "idea" | "problem" | "other"; message: string; page: string | null; created_at: string };
+        Insert: { user_id: string; kind: "idea" | "problem" | "other"; message: string; page?: string | null };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
       shared_resources: ReadOnly<{
         id: string;
         family_id: string;

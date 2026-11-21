@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import * as React from "react";
 import { signOut } from "@/app/(auth)/actions";
 import { Logo } from "@/components/brand/logo";
+import { FeedbackButton } from "@/components/app/feedback-button";
 import { ThemeToggle } from "@/components/theme";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -80,6 +81,7 @@ function SidebarContent({ user, pathname }: { user: ShellUser; pathname: string 
         <NavList items={primaryNav} pathname={pathname} />
         <div className="my-4 h-px bg-border" />
         <NavList items={secondaryNav} pathname={pathname} />
+        <FeedbackButton className="mt-0.5" />
       </nav>
 
       <div className="border-t border-border p-3">

@@ -160,6 +160,13 @@ Serve files only through short-lived signed URLs.
 - `analytics_overview()` returns the caller's own aggregates, gated by plan.
 - Verified on PostgreSQL 16 (`supabase/tests/phase7_family.sql`).
 
+## Phase 8 additions
+
+- Indexes for nine foreign keys that had none (found by the security audit).
+- Trigger functions and `product_usage()` are no longer callable by `anon`.
+- `feedback` (kind, message ≤ 2000, app page): users insert and read their own,
+  append-only, at most 10 per day (trigger). The team reads it with the service role.
+
 ## Open questions for review
 
 1. Initial `storage_mb` and `ai_queries_per_month` values per plan are placeholders.

@@ -21,3 +21,14 @@ describe("family schemas", () => {
     expect(invitationTokenSchema.safeParse("abc").success).toBe(false);
   });
 });
+
+import { feedbackSchema } from "./feedback";
+
+describe("feedback schema", () => {
+  it("trims and bounds the message, drops a bad page path", () => {
+    const r = feedbackSchema.parse({ kind: "problem", message: "  No carga el calendario  ", page: "javascript:alert(1)" });
+    expect(r).toEqual({ kind: "problem", message: "No carga el calendario", page: undefined });
+    expect(feedbackSchema.safeParse({ kind: "idea", message: "hey" }).success).toBe(false);
+    expect(feedbackSchema.safeParse({ kind: "spam", message: "hola mundo" }).success).toBe(false);
+  });
+});

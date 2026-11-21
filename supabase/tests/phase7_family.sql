@@ -85,7 +85,7 @@ insert into public.products (id, name) values ('e1000000-0000-4000-8000-00000000
 select public.share_product('e1000000-0000-4000-8000-000000000003');
 \echo [expect FAIL forbidden: member unshares a product of another member]
 select public.unshare_product('e1000000-0000-4000-8000-000000000001');
-\echo [expect 0 rows: direct insert into shared_resources]
+\echo [expect FAIL: direct insert into shared_resources is blocked by RLS]
 insert into public.shared_resources (family_id, owner_id, product_id)
 select family_id, 'bbbbbbbb-2222-4222-8222-222222222222', 'e1000000-0000-4000-8000-000000000003' from public.family_members limit 1;
 

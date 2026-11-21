@@ -77,7 +77,7 @@ setup notice.
 | `pnpm test` | Unit tests (shared Zod schemas) |
 
 SQL smoke tests (against a local DB with the migrations applied):
-`supabase/tests/rls_smoke.sql`, `phase2_products.sql`, `phase3_documents.sql`, `phase4_automation.sql`, `phase5_assistant.sql`, `phase6_billing.sql`, `phase7_family.sql` (run with `psql "$DB_URL" -f …`)
+`supabase/tests/rls_smoke.sql`, `phase2_products.sql`, `phase3_documents.sql`, `phase4_automation.sql`, `phase5_assistant.sql`, `phase6_billing.sql`, `phase7_family.sql`, `phase8_production.sql`, `security_audit.sql`; run them all on fresh databases with `scripts/db-test.sh`
 
 ## Deploying to Vercel
 
@@ -219,10 +219,36 @@ The family needs `SUPABASE_SERVICE_ROLE_KEY` on the server to open shared files
 `shared_file_path()` authorizes it) and `RESEND_API_KEY` to e-mail invitations
 (without it, the invite link is shown to copy).
 
-## Next: Phase 8 — Production
+## What's in Phase 8
 
-Security review, performance and accessibility passes, backups, monitoring,
-deployment, beta testing and public launch.
+Production readiness. Details and results in `docs/operations/`.
+
+- **Security**: Content-Security-Policy on every response; an automated database
+  audit (`supabase/tests/security_audit.sql`) that fails CI if a table loses RLS, a
+  definer function becomes callable by visitors, or a foreign key is unindexed (it
+  found and the Phase 8 migration fixed both); `pnpm audit` clean.
+- **Privacy (Ley 29733)**: Ajustes → *Tus datos*: download everything as JSON, or
+  delete the account (cancels the Mercado Pago subscription, removes stored files,
+  then deletes the user; every table cascades).
+- **Accessibility**: axe-core finds 0 WCAG 2.2 AA violations on 28 pages, light and
+  dark, desktop and mobile (calendar ARIA and gold text contrast fixed).
+- **Performance**: Lighthouse 100 on desktop and 84–97 on simulated mobile (see the
+  quality report).
+- **Monitoring**: `GET /api/health` for uptime checks; every server error is logged
+  as one JSON line (`src/instrumentation.ts`) with the digest users see.
+- **Beta**: *Enviar comentarios* in the sidebar stores feedback with the page it came
+  from (10 a day per person).
+- **CI**: `.github/workflows/ci.yml` runs lint, types, unit tests, build, `pnpm audit`,
+  and every SQL test on a fresh Postgres plus the security audit (`scripts/db-test.sh`).
+- **Backups**: Supabase PITR plus `scripts/backup-db.sh` (encrypted `pg_dump`); a
+  restore drill is documented and was run locally.
+- **Launch**: `docs/operations/launch-checklist.md` lists every account, setting,
+  variable and legal step for go-live.
+
+## Next: Phase 9 — Mobile
+
+Shared domain and API packages, a React Native (Expo) app, iOS and Android testing,
+push notifications and store submission.
 
 ---
 
