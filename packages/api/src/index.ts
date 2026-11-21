@@ -264,7 +264,7 @@ export async function listCategories(db: Db, userId: string): Promise<Category[]
 
 export type UpcomingItem = {
   key: string;
-  kind: "warranty" | "return" | "document" | "reminder";
+  kind: "warranty" | "return" | "document" | "reminder" | "maintenance";
   date: string;
   title: string;
   productId: string | null;
@@ -276,15 +276,18 @@ export type UpcomingItem = {
 /** Dates between today and `days` ahead: own warranties, returns, documents, custom reminders, and family-shared dates. */
 export async function listUpcoming(db: Db, userId: string, today: string, days = 90, timeZone = "America/Lima"): Promise<UpcomingItem[]> {
   const horizon = new Date(Date.parse(`${today}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
-  const [w, r, d, m, fam] = await Promise.all([
+  const [w, r, d, m, fam, mt] = await Promise.all([
     db.from("warranties").select("id, end_date, product_id, products!warranties_product_fk(name)").eq("user_id", userId).gte("end_date", today).lte("end_date", horizon),
     db.from("return_deadlines").select("id, deadline_date, product_id, products!return_deadlines_product_fk(name)").eq("user_id", userId).gte("deadline_date", today).lte("deadline_date", horizon),
     db.from("documents").select("id, title, expires_on, product_id").eq("user_id", userId).gte("expires_on", today).lte("expires_on", horizon),
     db.from("reminders").select("id, title, scheduled_at, product_id").eq("user_id", userId).eq("source", "custom").eq("status", "scheduled")
       .gte("scheduled_at", `${today}T00:00:00Z`).lte("scheduled_at", `${horizon}T23:59:59Z`),
     db.rpc("family_shared_events", { p_from: today, p_to: horizon }),
+    // Overdue maintenance is still pending, so it is included.
+    db.from("maintenance_plans").select("id, title, next_due_date, product_id, products!maintenance_plans_product_fk(name)")
+      .eq("user_id", userId).eq("active", true).lte("next_due_date", horizon),
   ]);
-  const err = w.error ?? r.error ?? d.error ?? m.error;
+  const err = w.error ?? r.error ?? d.error ?? m.error ?? mt.error;
   if (err) throw new Error(`No se pudieron cargar los vencimientos: ${err.message}`);
   const localDate = (iso: string) =>
     new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso));
@@ -293,6 +296,14 @@ export async function listUpcoming(db: Db, userId: string, today: string, days =
     ...(r.data ?? []).map((x) => ({ key: `r-${x.id}`, kind: "return" as const, date: x.deadline_date, title: "Último día para devolver", productId: x.product_id, productName: nameOf(x.products as NameRef) })),
     ...(d.data ?? []).map((x) => ({ key: `d-${x.id}`, kind: "document" as const, date: x.expires_on!, title: `Vence: ${x.title}`, productId: x.product_id, productName: null })),
     ...(m.data ?? []).map((x) => ({ key: `m-${x.id}`, kind: "reminder" as const, date: localDate(x.scheduled_at), title: x.title, productId: x.product_id, productName: null })),
+    ...(mt.data ?? []).map((x) => ({
+      key: `mt-${x.id}`,
+      kind: "maintenance" as const,
+      date: x.next_due_date,
+      title: x.next_due_date < today ? `${x.title} (atrasado)` : x.title,
+      productId: x.product_id,
+      productName: nameOf(x.products as NameRef),
+    })),
     // Family dates are optional: a missing family (or migration) just means none.
     ...(fam.error ? [] : (fam.data ?? [])).map((x, i) => ({
       key: `f-${x.kind}-${x.product_id}-${i}`,

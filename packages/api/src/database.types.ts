@@ -14,7 +14,8 @@ type ProcessingStatus = "uploaded" | "processing" | "needs_review" | "confirmed"
 type DocumentType = "receipt" | "invoice" | "warranty" | "manual" | "insurance" | "certificate" | "other";
 type WarrantyKind = "manufacturer" | "store" | "extended" | "other";
 type ReminderStatus = "scheduled" | "sent" | "dismissed" | "cancelled" | "failed";
-type ReminderSource = "warranty" | "return" | "document" | "custom";
+type ReminderSource = "warranty" | "return" | "document" | "custom" | "maintenance";
+type MaintenanceUnit = "days" | "weeks" | "months" | "years";
 type Recurrence = "none" | "monthly" | "quarterly" | "semiannual" | "yearly";
 type ProductStatus = "active" | "sold" | "gifted" | "archived" | "disposed";
 type VerificationStatus = "extracted" | "manual" | "confirmed" | "needs_verification";
@@ -363,6 +364,81 @@ export type Database = {
           },
         ];
       };
+      maintenance_plans: {
+        Row: {
+          id: string;
+          user_id: string;
+          product_id: string;
+          title: string;
+          notes: string | null;
+          interval_count: number;
+          interval_unit: MaintenanceUnit;
+          next_due_date: string;
+          last_done_date: string | null;
+          lead_days: number;
+          active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string;
+          product_id: string;
+          title: string;
+          notes?: string | null;
+          interval_count: number;
+          interval_unit: MaintenanceUnit;
+          next_due_date: string;
+          lead_days?: number;
+          active?: boolean;
+        };
+        Update: {
+          title?: string;
+          notes?: string | null;
+          interval_count?: number;
+          interval_unit?: MaintenanceUnit;
+          next_due_date?: string;
+          lead_days?: number;
+          active?: boolean;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_plans_product_fk";
+            columns: ["product_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
+      maintenance_logs: {
+        Row: {
+          id: string;
+          user_id: string;
+          product_id: string;
+          plan_id: string | null;
+          title: string;
+          performed_on: string;
+          cost: number | null;
+          currency: string | null;
+          provider: string | null;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          user_id?: string;
+          product_id: string;
+          plan_id?: string | null;
+          title: string;
+          performed_on: string;
+          cost?: number | string | null;
+          currency?: string | null;
+          provider?: string | null;
+          notes?: string | null;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
       return_deadlines: {
         Row: {
           id: string;
@@ -564,6 +640,17 @@ export type Database = {
       complete_reminder: {
         Args: { p_id: string; p_email_status: string; p_error?: string | null; p_retry?: boolean };
         Returns: undefined;
+      };
+      complete_maintenance: {
+        Args: {
+          p_plan_id: string;
+          p_performed_on: string;
+          p_cost?: string | null;
+          p_currency?: string | null;
+          p_provider?: string | null;
+          p_notes?: string | null;
+        };
+        Returns: string;
       };
       reserve_scan: { Args: { p_receipt_id: string; p_provider: string }; Returns: string };
       scan_retries_left: { Args: { p_receipt_id: string }; Returns: number };

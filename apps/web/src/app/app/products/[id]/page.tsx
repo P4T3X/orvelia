@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { DocumentList } from "@/components/documents/document-list";
 import { ShareToggle } from "@/components/family/family-controls";
 import { ProductActions } from "@/components/products/product-actions";
+import { MaintenanceSection } from "@/components/products/maintenance-section";
 import { ProtectionSection } from "@/components/products/protection-section";
 import { ReceiptStatus } from "@/components/scanner/receipt-status";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
 import { todayIn } from "@/lib/dashboard";
 import { listDocuments } from "@/lib/documents";
 import { getFamilyOverview, isProductShared } from "@/lib/family";
+import { getProductMaintenance } from "@/lib/maintenance";
 import { getProductProtection } from "@/lib/protection";
 import { getProduct } from "@/lib/products";
 import { createClient } from "@/lib/supabase/server";
@@ -45,13 +47,14 @@ export default async function ProductPage({ params }: Props) {
   const { id } = await params;
   if (!isUuid(id)) notFound();
   const user = await requireUser(`/app/products/${id}`);
-  const [product, profile, allDocuments, protection, family, shared] = await Promise.all([
+  const [product, profile, allDocuments, protection, family, shared, maintenance] = await Promise.all([
     getProduct(user.id, id),
     getProfile(user.id),
     listDocuments(user.id, { limit: 200 }),
     getProductProtection(user.id, id),
     getFamilyOverview(),
     isProductShared(id),
+    getProductMaintenance(user.id, id),
   ]);
   const documents = allDocuments.filter((d) => d.productId === id);
   if (!product) notFound();
@@ -189,6 +192,14 @@ export default async function ProductPage({ params }: Props) {
         documents={allDocuments.map((d) => ({ id: d.id, title: d.title }))}
         today={todayIn(profile?.timezone ?? "America/Lima")}
         timeZone={profile?.timezone ?? "America/Lima"}
+      />
+
+      <MaintenanceSection
+        productId={product.id}
+        plans={maintenance.plans}
+        logs={maintenance.logs}
+        today={todayIn(profile?.timezone ?? "America/Lima")}
+        defaultCurrency={profile?.preferred_currency ?? "PEN"}
       />
 
       <p className="mt-10 text-[13px] text-muted-foreground">

@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { AssistantDataSource, Deadline, ProductSummary, RecordRef, WarrantySummary } from "@orvelia/ai";
+import { describeInterval } from "@orvelia/domain";
 import { normalizeSearch } from "@orvelia/schemas";
 import { todayIn } from "@/lib/dashboard";
 import { createClient } from "@/lib/supabase/server";
@@ -275,6 +276,53 @@ export async function createAssistantDataSource(userId: string, timeZone: string
             recurrence: x.recurrence,
             product: x.product_id && name ? productRef(x.product_id, name) : null,
           };
+        }),
+      };
+    },
+
+    async list_maintenance({ days: n }) {
+      let q = supabase
+        .from("maintenance_plans")
+        .select("id, title, interval_count, interval_unit, next_due_date, last_done_date, product_id, products!maintenance_plans_product_fk(name)")
+        .eq("user_id", userId)
+        .eq("active", true)
+        .order("next_due_date")
+        .limit(50);
+      if (n) q = q.lte("next_due_date", todayIn(timeZone, n));
+      const { data, error } = await q;
+      if (error) throw error;
+      const ids = (data ?? []).map((x) => x.id);
+      const spent = new Map<string, Map<string, number>>();
+      if (ids.length > 0) {
+        const { data: logs, error: logError } = await supabase
+          .from("maintenance_logs")
+          .select("plan_id, cost, currency")
+          .eq("user_id", userId)
+          .in("plan_id", ids)
+          .not("cost", "is", null);
+        if (logError) throw logError;
+        for (const l of logs ?? []) {
+          if (!l.plan_id || l.cost === null || !l.currency) continue;
+          const byCur = spent.get(l.plan_id) ?? new Map<string, number>();
+          byCur.set(l.currency, Math.round(((byCur.get(l.currency) ?? 0) + Number(l.cost)) * 100) / 100);
+          spent.set(l.plan_id, byCur);
+        }
+      }
+      return {
+        plans: (data ?? []).flatMap((x) => {
+          const name = one(x.products as NameRef)?.name;
+          if (!name) return [];
+          return [
+            {
+              product: productRef(x.product_id, name),
+              title: x.title,
+              every: describeInterval(x.interval_count, x.interval_unit),
+              nextDueDate: x.next_due_date,
+              daysLeft: days(today, x.next_due_date),
+              lastDoneDate: x.last_done_date,
+              spent: [...(spent.get(x.id) ?? new Map()).entries()].map(([currency, amount]) => ({ currency, amount })),
+            },
+          ];
         }),
       };
     },

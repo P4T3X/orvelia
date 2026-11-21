@@ -4,11 +4,15 @@ import { createClient } from "@/lib/supabase/server";
 
 export type UpcomingItem = {
   id: string;
-  kind: "warranty" | "return";
+  kind: "warranty" | "return" | "maintenance";
   date: string; // YYYY-MM-DD
   productId: string;
   productName: string;
-  verification: string;
+  /** Verification state for warranties and returns; null for maintenance. */
+  verification: string | null;
+  /** Maintenance task title. */
+  title?: string;
+  overdue?: boolean;
 };
 
 export type DashboardData = {
@@ -40,7 +44,7 @@ export async function getDashboardData(userId: string, timeZone: string): Promis
   const today = todayIn(timeZone);
   const horizon = todayIn(timeZone, UPCOMING_WINDOW_DAYS);
 
-  const [products, warranties, receipts, upcomingWarranties, upcomingReturns, subscription] = await Promise.all([
+  const [products, warranties, receipts, upcomingWarranties, upcomingReturns, subscription, maintenance] = await Promise.all([
     supabase.from("products").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "active"),
     supabase.from("warranties").select("id", { count: "exact", head: true }).eq("user_id", userId).gte("end_date", today),
     supabase.from("receipts").select("id", { count: "exact", head: true }).eq("user_id", userId),
@@ -61,9 +65,18 @@ export async function getDashboardData(userId: string, timeZone: string): Promis
       .order("deadline_date")
       .limit(10),
     supabase.from("subscriptions").select("plan").eq("user_id", userId).maybeSingle(),
+    // Overdue maintenance is included: it is still pending.
+    supabase
+      .from("maintenance_plans")
+      .select("id, title, next_due_date, product_id, products!maintenance_plans_product_fk(name)")
+      .eq("user_id", userId)
+      .eq("active", true)
+      .lte("next_due_date", horizon)
+      .order("next_due_date")
+      .limit(10),
   ]);
 
-  const firstError = [products, warranties, receipts, upcomingWarranties, upcomingReturns, subscription].find(
+  const firstError = [products, warranties, receipts, upcomingWarranties, upcomingReturns, subscription, maintenance].find(
     (r) => r.error,
   )?.error;
   if (firstError) throw new Error(`No se pudo cargar el panel: ${firstError.message}`);
@@ -85,13 +98,23 @@ export async function getDashboardData(userId: string, timeZone: string): Promis
       productName: nameOf(r.products as ProductRef),
       verification: r.verification_status,
     })),
+    ...(maintenance.data ?? []).map((m) => ({
+      id: m.id,
+      kind: "maintenance" as const,
+      date: m.next_due_date,
+      productId: m.product_id,
+      productName: nameOf(m.products as ProductRef),
+      verification: null,
+      title: m.title,
+      overdue: m.next_due_date < today,
+    })),
   ].sort((a, b) => a.date.localeCompare(b.date));
 
   return {
     activeProducts: products.count ?? 0,
     activeWarranties: warranties.count ?? 0,
     receipts: receipts.count ?? 0,
-    upcomingCount: upcoming.length,
+    upcomingCount: upcoming.filter((u) => u.kind !== "maintenance").length,
     upcoming: upcoming.slice(0, 8),
     plan: subscription.data?.plan ?? "free",
   };

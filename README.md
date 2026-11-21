@@ -378,6 +378,34 @@ from Phase 4. This stage adds:
 - No migration needed. Tests: 4 new unit tests (printed terms, date math,
   confirmation schema) and a 29-step browser test.
 
+## Stage 5 — Smart Calendar: maintenance
+
+The calendar from Phase 4 already showed warranty ends, return deadlines,
+document expiries and custom reminders, with notification preferences and a
+scheduled backend job. This stage adds **maintenance schedules** (Module 6):
+
+- **Per product** ("Mantenimiento" section on the product page): what to do,
+  how often (every N days / weeks / months / years), the next date and how many
+  days before to be notified. Plans can be edited, paused (no reminders) and
+  deleted (history is kept).
+- **"Marcar como hecho"** records the date, optional cost (per currency, never
+  mixed), who did it and notes, and moves the next date forward in one database
+  transaction (`complete_maintenance`). Logging an older visit never pulls the
+  schedule back; future dates are rejected.
+- **History** of every completed maintenance with the total spent.
+- **Reminders**: created by a database trigger N days before and on the due date
+  (source `maintenance`), rebuilt on every change, removed when paused or deleted,
+  and renamed when the product is renamed. Delivered by the existing cron job.
+- **Calendar** shows the next date and projects the following occurrences;
+  **Inicio** lists due and overdue maintenance; the **mobile app**'s upcoming
+  list includes it; **ORVELIA AI** has a `list_maintenance` tool (real data,
+  links to products); **data export** includes plans and logs.
+- Migration: `20261201000000_maintenance_stage5.sql` (tables
+  `maintenance_plans`, `maintenance_logs`, owner-only RLS, composite FKs,
+  `complete_maintenance()`, reminder triggers).
+- Tests: `supabase/tests/phase5b_maintenance.sql`, 5 new unit tests (schemas,
+  interval math, assistant), and a 27-step browser test.
+
 ## What's next
 
 All nine phases of the technical document are built. Remaining work needs your

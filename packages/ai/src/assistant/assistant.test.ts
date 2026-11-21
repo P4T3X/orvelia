@@ -42,6 +42,7 @@ const data = (over: Partial<AssistantDataSource> = {}): AssistantDataSource => (
   products_missing_receipts: async () => ({ products: [], total: 0 }),
   recent_purchases: async () => ({ products: [] }),
   list_reminders: async () => ({ reminders: [] }),
+  list_maintenance: async () => ({ plans: [] }),
   ...over,
 });
 const base = { history: [], today: "2026-11-20", timeZone: "America/Lima" };
@@ -83,5 +84,31 @@ describe("askAssistant guards", () => {
   it("rejects empty answers", async () => {
     const empty: AssistantModel = { id: "x", isTest: true, ask: async () => ({ text: " ", toolOutputs: [], toolsUsed: [] }) };
     await expect(askAssistant(empty, { ...base, question: "x", data: data() })).rejects.toMatchObject({ reason: "empty" });
+  });
+});
+
+describe("maintenance questions", () => {
+  it("lists scheduled maintenance with verified links", async () => {
+    const d = data({
+      list_maintenance: async () => ({
+        plans: [
+          {
+            product: ref(A, "Laptop"),
+            title: "Limpieza de filtros",
+            every: "Cada 6 meses",
+            nextDueDate: "2026-11-10",
+            daysLeft: -10,
+            lastDoneDate: "2026-05-10",
+            spent: [],
+          },
+        ],
+      }),
+    });
+    const a = await askAssistant(createFixtureAssistant(), { ...base, question: "¿Qué mantenimiento está programado?", data: d });
+    const text = a.segments.map((s) => (s.kind === "text" ? s.text : "")).join("");
+    expect(a.toolsUsed).toEqual(["list_maintenance"]);
+    expect(text).toContain("Limpieza de filtros");
+    expect(text).toContain("atrasado");
+    expect(a.refs).toEqual([ref(A, "Laptop")]);
   });
 });

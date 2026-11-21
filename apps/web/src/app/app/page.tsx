@@ -109,7 +109,7 @@ export default async function HomePage({
         <section aria-labelledby="upcoming" className="rounded-xl border border-border bg-surface-raised">
           <div className="flex items-center justify-between border-b border-border px-5 py-4 sm:px-6">
             <h2 id="upcoming" className="font-medium">
-              Próximos vencimientos
+              Próximas fechas
             </h2>
             <Link href="/app/calendar" className="text-sm text-muted-foreground hover:text-foreground">
               Ver calendario
@@ -118,9 +118,9 @@ export default async function HomePage({
           {data.upcoming.length === 0 ? (
             <div className="px-6 py-14 text-center">
               <CalendarClock className="mx-auto size-6 text-muted-foreground" aria-hidden strokeWidth={1.5} />
-              <p className="mt-4 font-medium">Nada vence en los próximos 30 días</p>
+              <p className="mt-4 font-medium">Nada vence ni toca en los próximos 30 días</p>
               <p className="mx-auto mt-1.5 max-w-xs text-sm text-muted-foreground">
-                Cuando registres garantías y plazos de devolución, aparecerán aquí antes de vencer.
+                Cuando registres garantías, plazos de devolución o mantenimientos, aparecerán aquí a tiempo.
               </p>
             </div>
           ) : (
@@ -128,7 +128,7 @@ export default async function HomePage({
               {data.upcoming.map((item) => (
                 <li key={`${item.kind}-${item.id}`}>
                   <Link
-                    href={`/app/products/${item.productId}`}
+                    href={`/app/products/${item.productId}${item.kind === "maintenance" ? "#mantenimiento" : ""}`}
                     className="flex items-center gap-4 px-5 py-4 hover:bg-muted sm:px-6"
                   >
                     <span className="w-14 shrink-0 text-sm tabular-nums text-muted-foreground">
@@ -137,8 +137,17 @@ export default async function HomePage({
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium">{item.productName}</span>
                       <span className="block text-[13px] text-muted-foreground">
-                        {item.kind === "warranty" ? "Fin de garantía" : "Último día de devolución"} ·{" "}
-                        {VERIFICATION_STATUS_LABELS[item.verification as VerificationStatus] ?? item.verification}
+                        {item.kind === "maintenance" ? (
+                          <>
+                            Mantenimiento: {item.title}
+                            {item.overdue && <span className="font-medium text-danger"> · atrasado</span>}
+                          </>
+                        ) : (
+                          <>
+                            {item.kind === "warranty" ? "Fin de garantía" : "Último día de devolución"} ·{" "}
+                            {VERIFICATION_STATUS_LABELS[item.verification as VerificationStatus] ?? item.verification}
+                          </>
+                        )}
                       </span>
                     </span>
                   </Link>

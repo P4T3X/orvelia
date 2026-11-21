@@ -1,9 +1,9 @@
 import "server-only";
 
-import type { Recurrence } from "@orvelia/domain";
+import { maintenanceNextDate, type MaintenanceUnit, type Recurrence } from "@orvelia/domain";
 import { createClient } from "@/lib/supabase/server";
 
-export type CalendarEventKind = "warranty" | "return" | "document" | "reminder";
+export type CalendarEventKind = "warranty" | "return" | "document" | "reminder" | "maintenance";
 
 export type CalendarEvent = {
   key: string;
@@ -22,7 +22,7 @@ export type ReminderRow = {
   title: string;
   description: string | null;
   scheduledAt: string;
-  source: "warranty" | "return" | "document" | "custom";
+  source: "warranty" | "return" | "document" | "custom" | "maintenance";
   recurrence: Recurrence;
   productId: string | null;
   productName: string | null;
@@ -53,7 +53,7 @@ export async function getCalendarEvents(userId: string, from: string, to: string
   const fromTs = new Date(Date.parse(`${from}T00:00:00Z`) - 86_400_000).toISOString();
   const toTs = new Date(Date.parse(`${to}T23:59:59Z`) + 86_400_000).toISOString();
 
-  const [w, r, d, rem, fam] = await Promise.all([
+  const [w, r, d, rem, fam, mp] = await Promise.all([
     supabase
       .from("warranties")
       .select("id, end_date, product_id, products!warranties_product_fk(name)")
@@ -81,8 +81,14 @@ export async function getCalendarEvents(userId: string, from: string, to: string
       .gte("scheduled_at", fromTs)
       .lte("scheduled_at", toTs),
     supabase.rpc("family_shared_events", { p_from: from, p_to: to }),
+    supabase
+      .from("maintenance_plans")
+      .select("id, title, product_id, next_due_date, interval_count, interval_unit, products!maintenance_plans_product_fk(name)")
+      .eq("user_id", userId)
+      .eq("active", true)
+      .lte("next_due_date", to),
   ]);
-  const err = w.error ?? r.error ?? d.error ?? rem.error ?? fam.error;
+  const err = w.error ?? r.error ?? d.error ?? rem.error ?? fam.error ?? mp.error;
   if (err) throw new Error(`No se pudo cargar el calendario: ${err.message}`);
 
   const events: CalendarEvent[] = [
@@ -120,6 +126,24 @@ export async function getCalendarEvents(userId: string, from: string, to: string
           href: x.product_id ? `/app/products/${x.product_id}` : "/app/calendar",
         },
       ];
+    }),
+    // Next due date plus the following occurrences that fall in the range.
+    ...(mp.data ?? []).flatMap((x) => {
+      const out: CalendarEvent[] = [];
+      let date = x.next_due_date;
+      for (let i = 0; i < 60 && date <= to; i++) {
+        if (date >= from) {
+          out.push({
+            key: `mt-${x.id}-${date}`,
+            kind: "maintenance" as const,
+            date,
+            title: `${x.title}: ${nameOf(x.products as NameRef) ?? "producto"}`,
+            href: `/app/products/${x.product_id}#mantenimiento`,
+          });
+        }
+        date = maintenanceNextDate(date, x.interval_count, x.interval_unit as MaintenanceUnit);
+      }
+      return out;
     }),
     ...(fam.data ?? []).map((x, i) => ({
       key: `f-${x.kind}-${x.product_id}-${x.event_date}-${i}`,

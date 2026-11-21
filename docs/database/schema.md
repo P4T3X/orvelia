@@ -194,6 +194,18 @@ Serve files only through short-lived signed URLs.
 - `scan_retries_left(receipt_id)` returns the automatic readings still allowed
   for the caller's receipt.
 
+## Stage 5 additions (maintenance)
+
+- `maintenance_plans` (product_id, title, notes, interval_count 1–365,
+  interval_unit days/weeks/months/years, next_due_date, last_done_date,
+  lead_days 0–90, active). Composite FK to products (cascade).
+- `maintenance_logs` (product_id, plan_id → set null on plan delete, title,
+  performed_on, cost + currency together or both null, provider, notes).
+- `complete_maintenance(plan, date, cost, currency, provider, notes)` — security
+  invoker (RLS applies); inserts a log and advances the plan; rejects future dates.
+- `reminder_source` gains `maintenance`; `sync_maintenance_reminders()` +
+  triggers keep reminders in step with plans and product names.
+
 ## Open questions for review
 
 1. Initial `storage_mb` and `ai_queries_per_month` values per plan are placeholders.

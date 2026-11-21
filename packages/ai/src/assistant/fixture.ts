@@ -80,7 +80,24 @@ async function ask({ question, data }: AskInput): Promise<RawAnswer> {
     return done("Tus compras más recientes:\n" + products.map((p: ProductSummary) => `- [[product:${p.ref.id}]]${p.purchaseDate ? `, ${fmtDate(p.purchaseDate)}` : ""}`).join("\n"));
   }
 
-  if (/(mantenimiento|recordatorio|programad)/.test(q)) {
+  if (q.includes("mantenimiento")) {
+    const { plans } = await call("list_maintenance", {});
+    if (plans.length === 0) {
+      // Maintenance may also live in plain reminders the user created.
+      const { reminders } = await call("list_reminders", { days: 365 });
+      if (reminders.length === 0) return done("No tienes mantenimientos ni recordatorios programados.");
+      return done("No tienes planes de mantenimiento, pero sí estos recordatorios:\n" + reminders.slice(0, 10).map((r) => `- ${fmtDate(r.localDate)}: ${r.title}`).join("\n"));
+    }
+    return done(
+      "Mantenimientos programados:\n" +
+        plans
+          .slice(0, 10)
+          .map((m) => `- ${m.title} de [[product:${m.product.id}]]: ${m.daysLeft < 0 ? `atrasado desde el ${fmtDate(m.nextDueDate)}` : fmtDate(m.nextDueDate)} (${m.every.toLowerCase()})`)
+          .join("\n"),
+    );
+  }
+
+  if (/(recordatorio|programad)/.test(q)) {
     const { reminders } = await call("list_reminders", { days: 365 });
     if (reminders.length === 0) return done("No tienes recordatorios programados.");
     return done("Tienes programado:\n" + reminders.slice(0, 10).map((r) => `- ${fmtDate(r.localDate)}: ${r.title}`).join("\n"));

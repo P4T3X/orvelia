@@ -31,6 +31,9 @@ export const toolInputs = {
   products_missing_receipts: z.object({ limit: z.number().int().min(1).max(50).optional() }),
   recent_purchases: z.object({ limit: z.number().int().min(1).max(20).optional() }),
   list_reminders: z.object({ days: z.number().int().min(1).max(365).describe("How many days ahead to look.") }),
+  list_maintenance: z.object({
+    days: z.number().int().min(1).max(730).optional().describe("Only plans due within N days (overdue included). Omit for all active plans."),
+  }),
 } as const;
 
 export type ToolName = keyof typeof toolInputs;
@@ -44,7 +47,8 @@ export const toolDescriptions: Record<ToolName, string> = {
   spending_summary: "Spending totals computed by the server from recorded purchase prices, per currency (never mixed). Also reports products without a price.",
   products_missing_receipts: "Products with no receipt linked.",
   recent_purchases: "Most recent purchases by purchase date.",
-  list_reminders: "Scheduled reminders (automatic and manual, e.g. maintenance) within N days.",
+  list_reminders: "Scheduled reminders (automatic and manual) within N days.",
+  list_maintenance: "Maintenance plans the user scheduled for their products: task, frequency, next due date (days left, negative = overdue), last time done and recorded costs.",
 };
 
 export type ProductSummary = {
@@ -93,6 +97,17 @@ export type ReminderSummary = {
   product: RecordRef | null;
 };
 
+export type MaintenanceSummary = {
+  product: RecordRef;
+  title: string;
+  every: string;
+  nextDueDate: string;
+  daysLeft: number;
+  lastDoneDate: string | null;
+  /** Totals of recorded costs per currency (never mixed). */
+  spent: { currency: string; amount: number }[];
+};
+
 export type ToolOutputs = {
   search_products: { products: ProductSummary[]; total: number };
   get_product: { product: (ProductSummary & { model: string | null; seller: string | null; serialNumber: string | null; notes: string | null; warranties: WarrantySummary[]; returns: Deadline[]; documents: RecordRef[]; receipt: RecordRef | null }) | null };
@@ -102,6 +117,7 @@ export type ToolOutputs = {
   products_missing_receipts: { products: ProductSummary[]; total: number };
   recent_purchases: { products: ProductSummary[] };
   list_reminders: { reminders: ReminderSummary[] };
+  list_maintenance: { plans: MaintenanceSummary[] };
 };
 
 /** Implemented by the app. Every method returns plain JSON including refs. */

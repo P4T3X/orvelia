@@ -22,6 +22,7 @@ export const REMINDER_SOURCE_LABELS = {
   return: "Devolución",
   document: "Documento",
   custom: "Recordatorio",
+  maintenance: "Mantenimiento",
 } as const;
 
 /** Lead-time options offered in Settings (days before the date). */
@@ -62,4 +63,44 @@ export function datesFromPrintedTerms(
     warrantyEnd: purchaseDate && terms.warrantyMonths ? addMonthsIso(purchaseDate, terms.warrantyMonths) : null,
     returnDeadline: purchaseDate && terms.returnDays ? addDaysIso(purchaseDate, terms.returnDays) : null,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Maintenance schedules (Stage 5)
+// ---------------------------------------------------------------------------
+export const MAINTENANCE_UNITS = ["days", "weeks", "months", "years"] as const;
+export type MaintenanceUnit = (typeof MAINTENANCE_UNITS)[number];
+
+const UNIT_WORDS: Record<MaintenanceUnit, [string, string]> = {
+  days: ["día", "días"],
+  weeks: ["semana", "semanas"],
+  months: ["mes", "meses"],
+  years: ["año", "años"],
+};
+
+export const MAINTENANCE_UNIT_LABELS: Record<MaintenanceUnit, string> = {
+  days: "días",
+  weeks: "semanas",
+  months: "meses",
+  years: "años",
+};
+
+/** "Cada 6 meses", "Cada semana". */
+export function describeInterval(count: number, unit: MaintenanceUnit): string {
+  const [one, many] = UNIT_WORDS[unit];
+  return count === 1 ? `Cada ${one}` : `Cada ${count} ${many}`;
+}
+
+/** Mirrors public.maintenance_next_date(). */
+export function maintenanceNextDate(from: string, count: number, unit: MaintenanceUnit): string {
+  switch (unit) {
+    case "days":
+      return addDaysIso(from, count);
+    case "weeks":
+      return addDaysIso(from, count * 7);
+    case "months":
+      return addMonthsIso(from, count);
+    case "years":
+      return addMonthsIso(from, count * 12);
+  }
 }

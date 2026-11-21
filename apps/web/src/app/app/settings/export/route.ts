@@ -16,6 +16,8 @@ const OWN_TABLES = [
   "documents",
   "warranties",
   "return_deadlines",
+  "maintenance_plans",
+  "maintenance_logs",
   "reminders",
   "notifications",
   "notification_preferences",

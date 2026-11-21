@@ -17,6 +17,7 @@ const KIND: Record<CalendarEventKind, { label: string; dot: string }> = {
   return: { label: "Devolución", dot: "bg-danger" },
   document: { label: "Documento", dot: "bg-silver" },
   reminder: { label: "Recordatorio", dot: "bg-foreground" },
+  maintenance: { label: "Mantenimiento", dot: "bg-success" },
 };
 
 const WEEKDAYS = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"];

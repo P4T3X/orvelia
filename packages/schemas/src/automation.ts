@@ -1,4 +1,5 @@
-import { RECURRENCES, USER_VERIFICATION_STATUSES, WARRANTY_KINDS } from "@orvelia/domain";
+import { MAINTENANCE_UNITS, RECURRENCES, SUPPORTED_CURRENCIES, USER_VERIFICATION_STATUSES, WARRANTY_KINDS } from "@orvelia/domain";
+import { parsePrice } from "./product";
 import { z } from "zod";
 
 const optionalText = (max: number) =>
@@ -93,3 +94,46 @@ export function zonedToUtc(date: string, time: string, timeZone: string): string
   const asZone = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"));
   return new Date(guess - (asZone - guess)).toISOString();
 }
+
+// ---------------------------------------------------------------------------
+// Maintenance (Stage 5)
+// ---------------------------------------------------------------------------
+const wholeNumber = (min: number, max: number, message: string) =>
+  z
+    .string()
+    .trim()
+    .regex(/^\d+$/, message)
+    .transform(Number)
+    .refine((n) => n >= min && n <= max, message);
+
+export const maintenancePlanSchema = z.object({
+  title: z.string().trim().min(1, "Escribe qué mantenimiento es.").max(160, "Máximo 160 caracteres."),
+  intervalCount: wholeNumber(1, 365, "Escribe un número entre 1 y 365."),
+  intervalUnit: z.enum(MAINTENANCE_UNITS, "Unidad no válida."),
+  nextDueDate: requiredDate,
+  leadDays: wholeNumber(0, 90, "Entre 0 y 90 días."),
+  notes: optionalText(2000),
+});
+export type MaintenancePlanInput = z.input<typeof maintenancePlanSchema>;
+export type MaintenancePlanData = z.output<typeof maintenancePlanSchema>;
+
+const optionalCost = z.string().transform((v, ctx) => {
+  const parsed = parsePrice(v);
+  if (parsed === undefined) {
+    ctx.addIssue({ code: "custom", message: "Escribe un monto válido, por ejemplo 150.00." });
+    return z.NEVER;
+  }
+  return parsed;
+});
+
+export const maintenanceDoneSchema = z.object({
+  performedOn: requiredDate.refine(
+    (v) => Date.parse(`${v}T00:00:00Z`) <= Date.now() + 86_400_000,
+    "La fecha no puede estar en el futuro.",
+  ),
+  cost: optionalCost,
+  currency: z.enum(SUPPORTED_CURRENCIES, "Moneda no válida."),
+  provider: optionalText(160),
+  notes: optionalText(2000),
+});
+export type MaintenanceDoneInput = z.input<typeof maintenanceDoneSchema>;

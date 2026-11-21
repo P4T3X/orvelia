@@ -6,6 +6,7 @@ export const KIND: Record<UpcomingItem["kind"], { label: string; icon: IconName 
   return: { label: "Devolución", icon: "rotate-ccw" },
   document: { label: "Documento", icon: "file-text" },
   reminder: { label: "Recordatorio", icon: "bell" },
+  maintenance: { label: "Mantenimiento", icon: "tool" },
 };
 
 export const PLAN_NAMES = { free: "Free", plus: "Plus", ultra: "Ultra" } as const;
