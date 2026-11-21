@@ -3,3 +3,4 @@ export * from "./profile";
 export * from "./product";
 export * from "./receipt";
 export * from "./automation";
+export * from "./family";

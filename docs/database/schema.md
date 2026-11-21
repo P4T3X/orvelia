@@ -136,6 +136,30 @@ Serve files only through short-lived signed URLs.
 - `billing_overview()` RPC for the billing page.
 - Verified on PostgreSQL 16 (`supabase/tests/phase6_billing.sql`).
 
+## Phase 7 additions
+
+- `plan_limits.family_members` (seats incl. owner: Free 0, Plus 0, Ultra 5) and
+  `advanced_analytics` (Plus, Ultra).
+- `families` (one per owner), `family_members` (one family per user; roles `owner`,
+  `admin`, `member`; exactly one owner), `family_invitations` (e-mail, role, SHA-256
+  token hash, expiry, accepted/revoked), `shared_resources` (family × product, composite
+  FK to the product so deleting it unshares it), `activity_logs` (family events).
+- Existing tables keep their owner-only policies unchanged. Shared data is read only
+  through security-definer functions that check membership, the active family and the
+  share: `family_shared_products()`, `family_shared_product(id)`,
+  `family_shared_events(from, to)`, `shared_file_path(kind, id)`.
+- All family writes go through functions: `create_family`, `rename_family`,
+  `delete_family`, `create_family_invitation`, `revoke_family_invitation`,
+  `accept_family_invitation`, `update_family_member_role`, `remove_family_member`,
+  `leave_family`, `share_product`, `unshare_product`. Family tables are read-only for
+  members (`family_invitations` has no policies at all); `invitation_preview(token)`
+  is the only function anon can call.
+- A family is active while its owner's effective plan has seats; otherwise every
+  shared read returns nothing and invitations are refused.
+- Leaving or being removed deletes that member's shares (trigger).
+- `analytics_overview()` returns the caller's own aggregates, gated by plan.
+- Verified on PostgreSQL 16 (`supabase/tests/phase7_family.sql`).
+
 ## Open questions for review
 
 1. Initial `storage_mb` and `ai_queries_per_month` values per plan are placeholders.
@@ -147,3 +171,6 @@ Serve files only through short-lived signed URLs.
 3. ~~Payment provider for Peru?~~ Mercado Pago Suscripciones (Phase 6).
 8. Electronic receipts (SUNAT boletas/facturas) and IGV on subscription prices are not handled yet; confirm with an accountant whether 19.99/29.99 include IGV.
 9. Downgrade Ultra → Plus currently starts the new plan at its first payment (no proration).
+10. Family seats (5 incl. owner) and the 20 invitations/day limit are placeholders.
+11. Sharing is read-only. Should members be able to add reminders or documents to a shared product?
+12. Shared reminders appear in members' calendars but are e-mailed only to the product's owner.

@@ -18,6 +18,7 @@ type ReminderSource = "warranty" | "return" | "document" | "custom";
 type Recurrence = "none" | "monthly" | "quarterly" | "semiannual" | "yearly";
 type ProductStatus = "active" | "sold" | "gifted" | "archived" | "disposed";
 type VerificationStatus = "extracted" | "manual" | "confirmed" | "needs_verification";
+export type FamilyRole = "owner" | "admin" | "member";
 
 /** Tables the app only reads so far; writes come with their modules. */
 type ReadOnly<Row> = {
@@ -81,6 +82,14 @@ export type Database = {
         };
         Relationships: [];
       };
+      shared_resources: ReadOnly<{
+        id: string;
+        family_id: string;
+        owner_id: string;
+        product_id: string;
+        shared_by: string | null;
+        created_at: string;
+      }>;
       plan_limits: ReadOnly<{
         plan: PlanId;
         max_products: number | null;
@@ -89,6 +98,8 @@ export type Database = {
         ai_queries_per_month: number | null;
         price_monthly: number;
         currency: string;
+        family_members: number;
+        advanced_analytics: boolean;
         updated_at: string;
       }>;
       billing_checkouts: {
@@ -520,6 +531,64 @@ export type Database = {
         Args: Record<string, never>;
         Returns: { used: number; max_products: number | null; plan: PlanId }[];
       };
+      create_family: { Args: { p_name: string }; Returns: string };
+      rename_family: { Args: { p_name: string }; Returns: undefined };
+      delete_family: { Args: Record<string, never>; Returns: undefined };
+      create_family_invitation: {
+        Args: { p_email: string; p_role: FamilyRole };
+        Returns: { invitation_id: string; token: string; expires_at: string; family_name: string }[];
+      };
+      revoke_family_invitation: { Args: { p_invitation: string }; Returns: undefined };
+      invitation_preview: {
+        Args: { p_token: string };
+        Returns: {
+          family_name: string;
+          inviter_name: string | null;
+          role: FamilyRole;
+          email: string;
+          status: "valid" | "accepted" | "revoked" | "expired" | "family_inactive";
+          expires_at: string;
+        }[];
+      };
+      accept_family_invitation: { Args: { p_token: string }; Returns: string };
+      update_family_member_role: { Args: { p_user: string; p_role: FamilyRole }; Returns: undefined };
+      remove_family_member: { Args: { p_user: string }; Returns: undefined };
+      leave_family: { Args: Record<string, never>; Returns: undefined };
+      share_product: { Args: { p_product: string }; Returns: undefined };
+      unshare_product: { Args: { p_product: string }; Returns: undefined };
+      family_overview: { Args: Record<string, never>; Returns: Json };
+      family_shared_products: {
+        Args: Record<string, never>;
+        Returns: {
+          product_id: string;
+          name: string;
+          brand: string | null;
+          model: string | null;
+          category: string | null;
+          status: ProductStatus;
+          purchase_date: string | null;
+          owner_name: string | null;
+          is_mine: boolean;
+          shared_at: string;
+          warranty_end: string | null;
+          return_deadline: string | null;
+          has_image: boolean;
+        }[];
+      };
+      family_shared_product: { Args: { p_product: string }; Returns: Json };
+      shared_file_path: { Args: { p_kind: string; p_id: string }; Returns: string | null };
+      family_shared_events: {
+        Args: { p_from: string; p_to: string };
+        Returns: {
+          event_date: string;
+          kind: "warranty" | "return" | "reminder";
+          title: string;
+          product_id: string;
+          product_name: string;
+          owner_name: string | null;
+        }[];
+      };
+      analytics_overview: { Args: Record<string, never>; Returns: Json };
     };
     Enums: {
       plan_id: PlanId;
@@ -527,6 +596,7 @@ export type Database = {
       processing_status: ProcessingStatus;
       document_type: DocumentType;
       verification_status: VerificationStatus;
+      family_role: FamilyRole;
     };
     CompositeTypes: { [_ in never]: never };
   };

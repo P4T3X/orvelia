@@ -45,6 +45,15 @@
   and is idempotent via `billing_events`. Subscriptions and checkouts are written only
   with the service role on the server; users can only read their own rows.
 
+- **Family sharing** keeps private and shared data on separate paths: owner-only RLS on
+  every existing table is untouched; members read shared data only through
+  security-definer functions that check membership, the active family and the share.
+  Family writes happen only in functions that enforce roles, seat limits and one family
+  per user. Invitation tokens (244 random bits) are stored as SHA-256 hashes, are
+  single-use, expire in 7 days and require the invited e-mail to match the signed-in
+  account. Shared files are signed by the server with the service role only after
+  `shared_file_path()` authorizes the caller; storage policies stay owner-only.
+
 ## Supabase dashboard settings to configure
 
 - Auth → Email: **Confirm email ON**, secure password change ON.

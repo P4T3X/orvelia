@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DocumentList } from "@/components/documents/document-list";
+import { ShareToggle } from "@/components/family/family-controls";
 import { ProductActions } from "@/components/products/product-actions";
 import { ProtectionSection } from "@/components/products/protection-section";
 import { ReceiptStatus } from "@/components/scanner/receipt-status";
@@ -13,6 +14,7 @@ import { getProfile, requireUser } from "@/lib/auth";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
 import { todayIn } from "@/lib/dashboard";
 import { listDocuments } from "@/lib/documents";
+import { getFamilyOverview, isProductShared } from "@/lib/family";
 import { getProductProtection } from "@/lib/protection";
 import { getProduct } from "@/lib/products";
 import { createClient } from "@/lib/supabase/server";
@@ -43,11 +45,13 @@ export default async function ProductPage({ params }: Props) {
   const { id } = await params;
   if (!isUuid(id)) notFound();
   const user = await requireUser(`/app/products/${id}`);
-  const [product, profile, allDocuments, protection] = await Promise.all([
+  const [product, profile, allDocuments, protection, family, shared] = await Promise.all([
     getProduct(user.id, id),
     getProfile(user.id),
     listDocuments(user.id, { limit: 200 }),
     getProductProtection(user.id, id),
+    getFamilyOverview(),
+    isProductShared(id),
   ]);
   const documents = allDocuments.filter((d) => d.productId === id);
   if (!product) notFound();
@@ -85,8 +89,9 @@ export default async function ProductPage({ params }: Props) {
             {product.name}
           </h1>
           {subtitle && <p className="mt-1 text-muted-foreground">{subtitle}</p>}
-          <div className="mt-5">
+          <div className="mt-5 flex flex-wrap items-center gap-2">
             <ProductActions id={product.id} name={product.name} status={product.status} />
+            {family.family?.active && <ShareToggle productId={product.id} shared={shared} familyName={family.family.name} />}
           </div>
         </div>
       </div>

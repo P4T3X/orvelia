@@ -13,6 +13,8 @@ export type CalendarEvent = {
   title: string;
   href: string;
   time?: string;
+  /** Set for dates from a product another family member shares. */
+  sharedBy?: string;
 };
 
 export type ReminderRow = {
@@ -51,7 +53,7 @@ export async function getCalendarEvents(userId: string, from: string, to: string
   const fromTs = new Date(Date.parse(`${from}T00:00:00Z`) - 86_400_000).toISOString();
   const toTs = new Date(Date.parse(`${to}T23:59:59Z`) + 86_400_000).toISOString();
 
-  const [w, r, d, rem] = await Promise.all([
+  const [w, r, d, rem, fam] = await Promise.all([
     supabase
       .from("warranties")
       .select("id, end_date, product_id, products!warranties_product_fk(name)")
@@ -78,8 +80,9 @@ export async function getCalendarEvents(userId: string, from: string, to: string
       .in("status", ["scheduled", "sent"])
       .gte("scheduled_at", fromTs)
       .lte("scheduled_at", toTs),
+    supabase.rpc("family_shared_events", { p_from: from, p_to: to }),
   ]);
-  const err = w.error ?? r.error ?? d.error ?? rem.error;
+  const err = w.error ?? r.error ?? d.error ?? rem.error ?? fam.error;
   if (err) throw new Error(`No se pudo cargar el calendario: ${err.message}`);
 
   const events: CalendarEvent[] = [
@@ -118,6 +121,19 @@ export async function getCalendarEvents(userId: string, from: string, to: string
         },
       ];
     }),
+    ...(fam.data ?? []).map((x, i) => ({
+      key: `f-${x.kind}-${x.product_id}-${x.event_date}-${i}`,
+      kind: x.kind,
+      date: x.event_date,
+      title:
+        x.kind === "warranty"
+          ? `Vence la garantía: ${x.product_name}`
+          : x.kind === "return"
+            ? `Último día para devolver: ${x.product_name}`
+            : `${x.title} (${x.product_name})`,
+      href: `/app/family/products/${x.product_id}`,
+      sharedBy: x.owner_name ?? "Familia",
+    })),
   ];
 
   return events.sort((a, b) => (a.date + (a.time ?? "")).localeCompare(b.date + (b.time ?? "")));

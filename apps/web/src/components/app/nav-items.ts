@@ -1,12 +1,14 @@
 import {
   Bot,
   CalendarDays,
+  ChartColumn,
   CreditCard,
   FileText,
   House,
   Package,
   ScanLine,
   Settings,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 
@@ -18,6 +20,8 @@ export const primaryNav: NavItem[] = [
   { href: "/app/scanner", label: "Escáner", icon: ScanLine },
   { href: "/app/documents", label: "Documentos", icon: FileText },
   { href: "/app/calendar", label: "Calendario", icon: CalendarDays },
+  { href: "/app/analytics", label: "Análisis", icon: ChartColumn },
+  { href: "/app/family", label: "Familia", icon: Users },
   { href: "/app/assistant", label: "ORVELIA AI", icon: Bot },
 ];
 

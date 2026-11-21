@@ -48,6 +48,7 @@ export const PLANS: readonly PlanPresentation[] = [
       "Productos ilimitados",
       "30 escaneos al mes",
       "100 consultas a ORVELIA AI al mes",
+      "Análisis avanzado de tu colección",
       "Más almacenamiento",
     ],
     highlighted: true,
@@ -62,7 +63,8 @@ export const PLANS: readonly PlanPresentation[] = [
     features: [
       "100 escaneos al mes",
       "500 consultas a ORVELIA AI al mes",
-      "Funciones familiares cuando estén disponibles",
+      "Familia de hasta 5 personas con productos compartidos",
+      "Análisis avanzado",
       "Almacenamiento ampliado",
     ],
   },

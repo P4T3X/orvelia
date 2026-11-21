@@ -38,12 +38,10 @@ const capabilities = [
   {
     name: "ORVELIA AI",
     body: "Pregunta qué garantías siguen activas o cuánto gastaste en electrónica. Responde solo con tus registros.",
-    soon: true,
   },
   {
     name: "ORVELIA Family",
-    body: "Un espacio compartido para el hogar, con permisos claros entre lo personal y lo común.",
-    soon: true,
+    body: "Una familia de hasta 5 personas en Ultra, con permisos claros entre lo personal y lo común.",
   },
 ];
 
@@ -117,11 +115,6 @@ export default function HomePage() {
               <div key={c.name} className="grid gap-2 py-6 sm:grid-cols-[13rem_1fr] sm:gap-8">
                 <dt className="flex items-center gap-2.5 font-medium">
                   {c.name}
-                  {c.soon && (
-                    <span className="rounded-full border border-border-strong px-2 py-0.5 text-[11px] font-normal text-muted-foreground">
-                      Pronto
-                    </span>
-                  )}
                 </dt>
                 <dd className="leading-relaxed text-muted-foreground">{c.body}</dd>
               </div>

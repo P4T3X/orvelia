@@ -66,7 +66,6 @@ const modules = [
   {
     icon: Bot,
     name: "ORVELIA AI",
-    soon: true,
     lead: "Pregunta en lenguaje natural sobre lo que posees.",
     points: [
       "¿Qué garantías siguen activas? ¿Qué productos no tienen comprobante?",
@@ -77,7 +76,6 @@ const modules = [
   {
     icon: Users,
     name: "ORVELIA Family",
-    soon: true,
     lead: "Un espacio compartido para el hogar.",
     points: [
       "Invitaciones y roles por miembro",
@@ -102,11 +100,6 @@ export default function FeaturesPage() {
                 <div className="flex items-center gap-3">
                   <Icon className="size-5 text-accent-ink" aria-hidden strokeWidth={1.5} />
                   <h2 className="text-xl font-medium tracking-[-0.01em]">{m.name}</h2>
-                  {m.soon && (
-                    <span className="rounded-full border border-border-strong px-2 py-0.5 text-[11px] text-muted-foreground">
-                      Pronto
-                    </span>
-                  )}
                 </div>
                 <p className="mt-3 max-w-sm leading-relaxed text-muted-foreground">{m.lead}</p>
               </div>

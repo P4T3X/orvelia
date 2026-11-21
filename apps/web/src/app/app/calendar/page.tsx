@@ -125,7 +125,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
                     <ul className="mt-1 hidden gap-1 sm:grid">
                       {items.slice(0, 2).map((e) => (
                         <li key={e.key}>
-                          <Link href={e.href} className="flex items-center gap-1.5 rounded px-1 py-0.5 text-[12px] leading-tight hover:bg-muted" title={e.title}>
+                          <Link href={e.href} className="flex items-center gap-1.5 rounded px-1 py-0.5 text-[12px] leading-tight hover:bg-muted" title={e.sharedBy ? `${e.title} (de ${e.sharedBy})` : e.title}>
                             <span className={cn("size-1.5 shrink-0 rounded-full", KIND[e.kind].dot)} aria-hidden />
                             <span className="truncate">{e.title}</span>
                           </Link>
@@ -167,7 +167,9 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
                       </span>
                       <span className={cn("size-2 shrink-0 rounded-full", KIND[e.kind].dot)} aria-hidden />
                       <span className="min-w-0 flex-1 truncate">{e.title}</span>
-                      <span className="hidden text-[12px] text-muted-foreground sm:inline">{KIND[e.kind].label}</span>
+                      <span className="hidden text-[12px] text-muted-foreground sm:inline">
+                        {e.sharedBy ? `${KIND[e.kind].label} de ${e.sharedBy}` : KIND[e.kind].label}
+                      </span>
                     </Link>
                   </li>
                 ))}

@@ -77,7 +77,7 @@ setup notice.
 | `pnpm test` | Unit tests (shared Zod schemas) |
 
 SQL smoke tests (against a local DB with the migrations applied):
-`supabase/tests/rls_smoke.sql`, `phase2_products.sql`, `phase3_documents.sql`, `phase4_automation.sql`, `phase5_assistant.sql`, `phase6_billing.sql` (run with `psql "$DB_URL" -f …`)
+`supabase/tests/rls_smoke.sql`, `phase2_products.sql`, `phase3_documents.sql`, `phase4_automation.sql`, `phase5_assistant.sql`, `phase6_billing.sql`, `phase7_family.sql` (run with `psql "$DB_URL" -f …`)
 
 ## Deploying to Vercel
 
@@ -194,10 +194,35 @@ Plan quotas (`plan_limits.ai_queries_per_month`): Free 0 · Plus 100 · Ultra 50
 
 Without these variables the billing page shows plans but disables checkout.
 
-## Next: Phase 7 — Family and advanced
+## What's in Phase 7
 
-Shared spaces for family members (Ultra), roles and invitations, transfers of ownership,
-and data export.
+- **Family (Ultra)**: the Ultra subscriber creates a family of up to 5 people (seats in
+  `plan_limits.family_members`). Members don't need to pay; a free account is enough.
+- **Invitations**: by e-mail (Resend) and as a copyable link (handy for WhatsApp). The
+  token is random, shown once, stored only as a SHA-256 hash, single-use, valid 7 days,
+  and can only be accepted by the invited e-mail address. Pending invitations count
+  toward the seat limit; up to 20 invitations per family per day.
+- **Roles**: Titular (owner), Administrador, Miembro. The owner changes roles and can
+  remove anyone; admins invite members and remove members; everyone can leave except
+  the owner, who can delete the family. Nothing a person owns is deleted.
+- **Read-only sharing**: from a product page, "Compartir con la familia". Members see
+  the product with its warranties, return deadlines, confirmed receipt, documents and
+  reminders, and shared dates appear in their calendar. Only the owner edits.
+- **Pause on downgrade**: if the owner's Ultra lapses, sharing and invitations pause;
+  nothing is deleted, and it resumes when Ultra is active again.
+- **Activity log** of family events, and an in-app notification when someone joins.
+- **Advanced analytics** (Plus and Ultra): collection value, purchases by month,
+  categories, warranty/receipt/document coverage, upcoming expirations.
+
+The family needs `SUPABASE_SERVICE_ROLE_KEY` on the server to open shared files
+(storage stays owner-only; the server signs a shared file only after
+`shared_file_path()` authorizes it) and `RESEND_API_KEY` to e-mail invitations
+(without it, the invite link is shown to copy).
+
+## Next: Phase 8 — Production
+
+Security review, performance and accessibility passes, backups, monitoring,
+deployment, beta testing and public launch.
 
 ---
 
