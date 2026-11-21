@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { ExtractionResult } from "@orvelia/ai";
-import type { ProcessingStatus } from "@orvelia/domain";
+import { MAX_FAILED_SCANS_PER_RECEIPT, type ProcessingStatus } from "@orvelia/domain";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 
@@ -23,6 +23,10 @@ export type ReceiptDetail = ReceiptSummary & {
   tax: number | null;
   extraction: ExtractionResult | null;
   processingError: string | null;
+  processingErrorCode: string | null;
+  attempts: number;
+  /** Automatic readings still allowed after failures (0 = fill in by hand). */
+  retriesLeft: number;
   fieldSources: Record<string, "extracted" | "manual">;
   confirmedAt: string | null;
   updatedAt: string;
@@ -84,12 +88,10 @@ export async function getReceipt(userId: string, id: string): Promise<ReceiptDet
   if (error) throw new Error(`No se pudo cargar el comprobante: ${error.message}`);
   if (!r) return null;
 
-  const { data: products } = await supabase
-    .from("products")
-    .select("id, name")
-    .eq("user_id", userId)
-    .eq("receipt_id", id)
-    .order("name");
+  const [{ data: products }, { data: retriesLeft }] = await Promise.all([
+    supabase.from("products").select("id, name").eq("user_id", userId).eq("receipt_id", id).order("name"),
+    supabase.rpc("scan_retries_left", { p_receipt_id: id }),
+  ]);
 
   const ex = asExtraction(r.extraction);
   return {
@@ -107,6 +109,9 @@ export async function getReceipt(userId: string, id: string): Promise<ReceiptDet
     label: r.merchant ?? ex?.data.merchant ?? null,
     extraction: ex,
     processingError: r.processing_error,
+    processingErrorCode: r.processing_error_code,
+    attempts: r.processing_attempts ?? 0,
+    retriesLeft: typeof retriesLeft === "number" ? retriesLeft : MAX_FAILED_SCANS_PER_RECEIPT,
     fieldSources: (r.field_sources ?? {}) as Record<string, "extracted" | "manual">,
     confirmedAt: r.confirmed_at,
     products: products ?? [],

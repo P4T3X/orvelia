@@ -31,6 +31,9 @@ export type WorkspaceReceipt = {
   currency: string | null;
   extraction: ExtractionResult | null;
   processingError: string | null;
+  processingErrorCode: string | null;
+  attempts: number;
+  retriesLeft: number;
   fieldSources: Record<string, "extracted" | "manual">;
   linkedProducts: { id: string; name: string }[];
 };
@@ -68,7 +71,13 @@ export function ReceiptWorkspace({
         {reading ? (
           <Processing receiptId={receipt.id} autoReading={autoReading} />
         ) : receipt.status === "failed" && !manual ? (
-          <Failed receiptId={receipt.id} message={receipt.processingError} onManual={() => setManual(true)} />
+          <Failed
+            receiptId={receipt.id}
+            message={receipt.processingError}
+            attempts={receipt.attempts}
+            retriesLeft={receipt.processingErrorCode === "configuration" ? 0 : receipt.retriesLeft}
+            onManual={() => setManual(true)}
+          />
         ) : (
           <ReviewForm
             receipt={receipt}
@@ -136,29 +145,51 @@ function Processing({ receiptId, autoReading }: { receiptId: string; autoReading
   );
 }
 
-function Failed({ receiptId, message, onManual }: { receiptId: string; message: string | null; onManual: () => void }) {
+function Failed({
+  receiptId,
+  message,
+  attempts,
+  retriesLeft,
+  onManual,
+}: {
+  receiptId: string;
+  message: string | null;
+  attempts: number;
+  retriesLeft: number;
+  onManual: () => void;
+}) {
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
   return (
     <div className="grid gap-5">
       <Alert tone="error" title="No pudimos leer este comprobante.">
-        {message ?? "Ocurrió un error inesperado."} Esta lectura no cuenta para tu límite mensual.
+        {message ?? "Ocurrió un error inesperado."} Las lecturas fallidas no cuentan para tu límite mensual.
+        {attempts > 0 && (
+          <span className="mt-1 block text-[13px]">
+            {retriesLeft > 0
+              ? `Intentos: ${attempts}. Puedes reintentar ${retriesLeft === 1 ? "una vez más" : `${retriesLeft} veces más`}.`
+              : "Ya no quedan reintentos automáticos para este comprobante. Completa los datos a mano."}
+          </span>
+        )}
       </Alert>
       <div className="flex flex-wrap gap-2">
-        <Button
-          loading={pending}
-          onClick={() =>
-            startTransition(async () => {
-              const res = await processReceipt(receiptId);
-              if (!res.ok) toast.error(res.message);
-              router.refresh();
-            })
-          }
-        >
-          {!pending && <RotateCcw aria-hidden />}
-          Reintentar lectura
-        </Button>
-        <Button variant="secondary" onClick={onManual}>
+        {retriesLeft > 0 && (
+          <Button
+            loading={pending}
+            onClick={() =>
+              startTransition(async () => {
+                const res = await processReceipt(receiptId);
+                if (!res.ok) toast.error(res.message);
+                else if (res.data?.outcome === "retry_limit") toast.info("Ya no quedan reintentos para este comprobante.");
+                router.refresh();
+              })
+            }
+          >
+            {!pending && <RotateCcw aria-hidden />}
+            Reintentar lectura
+          </Button>
+        )}
+        <Button variant={retriesLeft > 0 ? "secondary" : "primary"} onClick={onManual}>
           Completar a mano
         </Button>
       </div>

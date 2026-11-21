@@ -28,3 +28,5 @@ export const PROCESSING_STATUS_LABELS: Record<ProcessingStatus, string> = {
 export const UPLOAD_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"] as const;
 export type UploadMimeType = (typeof UPLOAD_MIME_TYPES)[number];
 export const UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
+/** Failed automatic readings allowed per receipt (mirrors public.max_failed_scans_per_receipt()). */
+export const MAX_FAILED_SCANS_PER_RECEIPT = 3;

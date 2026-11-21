@@ -306,6 +306,53 @@ last only within each page of 24; the mobile collection doesn't show coverage
 chips yet; everything was verified against a local Postgres with Supabase's
 roles and RLS, not yet against a hosted Supabase project.
 
+## Stage 3 — Smart Scanner (completion pass)
+
+The scanner from Phase 3 already uploaded photos and PDFs to private storage,
+read them through a provider-independent `ReceiptExtractor`, validated the
+result with Zod, showed an editable review, linked receipts to existing products
+or created new ones after confirmation, and counted readings against the monthly
+plan quota. This pass adds:
+
+- **Automatic retries** (`extractReceiptWithRetry` in `@orvelia/ai`): temporary
+  failures (outage, timeout, output that fails validation) are retried once with
+  backoff inside the same request. Credential or permission errors are not retried.
+- **Error classification**: `timeout`, `invalid_output`, `provider_error`,
+  `configuration`, `file_missing`, stored in `receipts.processing_error_code`
+  with a plain message for the user.
+- **Attempt history and cap**: every reading attempt is counted
+  (`receipts.processing_attempts`, `last_attempt_at`). After 3 failed readings
+  of the same receipt, `reserve_scan` refuses with `retry_limit_reached` and the
+  app offers manual entry. Failed readings still don't use the monthly quota.
+  The cap is computed from `ai_usage`, which users can't write.
+- **HEIC photos**: a clear message when the browser can't open a HEIC file, and
+  the server recognizes HEIC uploads instead of a generic error. Safari converts
+  HEIC on upload, so iPhone users are normally unaffected.
+- Longer function time (`maxDuration = 180`) for the pages and mobile route that
+  read receipts.
+- Test provider failure modes (`ORVELIA_FIXTURE_MODE=error|flaky|invalid|auth`,
+  never available in production) so failure handling is tested for real.
+- Migration: `20261130000000_scanner_stage3.sql`.
+- Tests: `supabase/tests/phase3b_scanner.sql`, 7 new unit tests in
+  `packages/ai`, and a 29-step browser test covering retries, the cap, manual
+  entry, HEIC, oversized files, PDFs and ownership.
+
+### Turning on automatic reading
+
+Reading is real only when a provider is configured; without one, receipts are
+stored and the user completes the data by hand. Nothing is ever simulated in
+production.
+
+| Variable | Value |
+|---|---|
+| `ORVELIA_AI_PROVIDER` | `gateway` |
+| `ORVELIA_EXTRACTION_MODEL` | a model with vision and PDF input, e.g. `anthropic/claude-haiku-5.5` |
+| Credentials | on Vercel, the project's OIDC token (automatic); locally `AI_GATEWAY_API_KEY` |
+
+The Vercel team needs AI Gateway enabled with credits or a payment method. If
+the gateway rejects the credentials, receipts fail with "no está configurada
+correctamente" and aren't retried. Set an AI Gateway budget before launch.
+
 ## What's next
 
 All nine phases of the technical document are built. Remaining work needs your

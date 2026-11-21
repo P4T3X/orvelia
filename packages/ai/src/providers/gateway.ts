@@ -8,7 +8,7 @@ import { rawReceiptSchema } from "../receipt";
  * change (ORVELIA_EXTRACTION_MODEL), not a code change.
  * Auth: AI_GATEWAY_API_KEY locally, or the project's OIDC token on Vercel.
  */
-export function createGatewayExtractor(modelId: string, timeoutMs = 60_000): ReceiptExtractor {
+export function createGatewayExtractor(modelId: string, timeoutMs = 45_000): ReceiptExtractor {
   return {
     id: `gateway:${modelId}`,
     isTest: false,
@@ -27,6 +27,8 @@ export function createGatewayExtractor(modelId: string, timeoutMs = 60_000): Rec
           },
         ],
         temperature: 0,
+        // One transport-level retry here; extractReceiptWithRetry adds one more for timeouts and bad output.
+        maxRetries: 1,
         timeout: timeoutMs,
         abortSignal: signal,
       });

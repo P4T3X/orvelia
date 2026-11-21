@@ -27,10 +27,14 @@ export type ExtractionResult = {
   extractedAt: string;
 };
 
+export type ExtractionFailure = "invalid_output" | "provider_error" | "timeout" | "configuration";
+
 export class ExtractionError extends Error {
   constructor(
     message: string,
-    readonly reason: "invalid_output" | "provider_error" | "timeout",
+    readonly reason: ExtractionFailure,
+    /** Worth trying again (temporary outage, timeout, malformed output). */
+    readonly retryable = reason !== "configuration",
   ) {
     super(message);
     this.name = "ExtractionError";
@@ -43,12 +47,7 @@ export async function extractReceipt(extractor: ReceiptExtractor, input: Extract
   try {
     raw = await extractor.extract(input);
   } catch (error) {
-    if (error instanceof ExtractionError) throw error;
-    const aborted = error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError");
-    throw new ExtractionError(
-      error instanceof Error ? error.message : "Unknown provider error",
-      aborted ? "timeout" : "provider_error",
-    );
+    throw classifyProviderError(error);
   }
 
   const parsed = rawReceiptSchema.safeParse(raw);
@@ -56,6 +55,57 @@ export async function extractReceipt(extractor: ReceiptExtractor, input: Extract
 
   const { data, warnings } = sanitizeReceipt(parsed.data, input.today);
   return { data, warnings, provider: extractor.id, isTest: extractor.isTest, extractedAt: new Date().toISOString() };
+}
+
+/**
+ * Map any provider failure onto our failure kinds. Authentication and
+ * permission errors mean the integration is misconfigured: retrying won't help.
+ */
+export function classifyProviderError(error: unknown): ExtractionError {
+  if (error instanceof ExtractionError) return error;
+  const e = error as { name?: string; message?: string; statusCode?: number; cause?: unknown } | null;
+  const message = e?.message ?? "Unknown provider error";
+  if (e?.name === "AbortError" || e?.name === "TimeoutError") return new ExtractionError(message, "timeout");
+  const status = e?.statusCode ?? (e?.cause as { statusCode?: number } | undefined)?.statusCode;
+  if (status === 401 || status === 403 || e?.name === "GatewayAuthenticationError" || e?.name === "LoadAPIKeyError") {
+    return new ExtractionError(message, "configuration");
+  }
+  if (e?.name === "AI_NoObjectGeneratedError" || e?.name === "NoObjectGeneratedError") {
+    return new ExtractionError(message, "invalid_output");
+  }
+  return new ExtractionError(message, "provider_error");
+}
+
+export type RetryOptions = {
+  /** Total tries inside one request, including the first. Default 2. */
+  maxTries?: number;
+  /** Wait before the second try; doubles after that. Default 1500 ms. */
+  baseDelayMs?: number;
+  sleep?: (ms: number) => Promise<void>;
+};
+
+/**
+ * extractReceipt with bounded retries for temporary failures. Configuration
+ * errors fail immediately. Each try still validates the output with Zod; a
+ * result is never produced unless a provider actually returned it.
+ */
+export async function extractReceiptWithRetry(
+  extractor: ReceiptExtractor,
+  input: ExtractInput,
+  { maxTries = 2, baseDelayMs = 1500, sleep = (ms) => new Promise((r) => setTimeout(r, ms)) }: RetryOptions = {},
+): Promise<ExtractionResult & { tries: number }> {
+  let lastError: ExtractionError | undefined;
+  for (let attempt = 1; attempt <= maxTries; attempt++) {
+    try {
+      const result = await extractReceipt(extractor, input);
+      return { ...result, tries: attempt };
+    } catch (error) {
+      lastError = classifyProviderError(error);
+      if (!lastError.retryable || attempt === maxTries || input.signal?.aborted) break;
+      await sleep(baseDelayMs * 2 ** (attempt - 1));
+    }
+  }
+  throw lastError ?? new ExtractionError("Extraction failed", "provider_error");
 }
 
 export const RECEIPT_INSTRUCTIONS = `You read purchase receipts (boletas, facturas, tickets, invoices), mostly from Peru.

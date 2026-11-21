@@ -1,7 +1,7 @@
 export * from "./receipt";
 export * from "./extractor";
 export { createGatewayExtractor } from "./providers/gateway";
-export { createFixtureExtractor } from "./providers/fixture";
+export { createFixtureExtractor, type FixtureMode } from "./providers/fixture";
 export * from "./assistant/contract";
 export * from "./assistant/answer";
 export * from "./assistant/assistant";

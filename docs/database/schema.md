@@ -183,6 +183,17 @@ Serve files only through short-lived signed URLs.
   `anon` has no access.
 - Index `products_user_brand_idx` on `(user_id, lower(brand))` for the brand filter.
 
+## Stage 3 additions (Smart Scanner)
+
+- `receipts.processing_attempts`, `receipts.last_attempt_at` and
+  `receipts.processing_error_code` (`timeout`, `invalid_output`,
+  `provider_error`, `configuration`, `file_missing`, `not_purchase`).
+- `reserve_scan` now also refuses with `retry_limit_reached` after
+  `max_failed_scans_per_receipt()` (3) failed readings of the same receipt, and
+  records each attempt on the receipt.
+- `scan_retries_left(receipt_id)` returns the automatic readings still allowed
+  for the caller's receipt.
+
 ## Open questions for review
 
 1. Initial `storage_mb` and `ai_queries_per_month` values per plan are placeholders.

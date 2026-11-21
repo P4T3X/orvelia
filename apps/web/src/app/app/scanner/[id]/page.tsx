@@ -13,6 +13,8 @@ import { createClient } from "@/lib/supabase/server";
 import { isUuid } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Comprobante" };
+/** Server actions on this page read receipts with AI (with retries). */
+export const maxDuration = 180;
 
 export default async function ReceiptPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -63,6 +65,9 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
           currency: receipt.currency,
           extraction: receipt.extraction,
           processingError: receipt.processingError,
+          processingErrorCode: receipt.processingErrorCode,
+          attempts: receipt.attempts,
+          retriesLeft: receipt.retriesLeft,
           fieldSources: receipt.fieldSources,
           linkedProducts: receipt.products,
         }}

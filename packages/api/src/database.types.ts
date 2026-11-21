@@ -237,6 +237,9 @@ export type Database = {
           processing_status: ProcessingStatus;
           extraction: Json | null;
           processing_error: string | null;
+          processing_error_code: string | null;
+          processing_attempts: number;
+          last_attempt_at: string | null;
           field_sources: Json;
           confirmed_at: string | null;
           created_at: string;
@@ -260,6 +263,7 @@ export type Database = {
           processing_status?: ProcessingStatus;
           extraction?: Json | null;
           processing_error?: string | null;
+          processing_error_code?: string | null;
           field_sources?: Json;
           confirmed_at?: string | null;
         };
@@ -562,6 +566,7 @@ export type Database = {
         Returns: undefined;
       };
       reserve_scan: { Args: { p_receipt_id: string; p_provider: string }; Returns: string };
+      scan_retries_left: { Args: { p_receipt_id: string }; Returns: number };
       finish_scan: { Args: { p_usage_id: string; p_succeeded: boolean }; Returns: undefined };
       scan_usage: {
         Args: Record<string, never>;

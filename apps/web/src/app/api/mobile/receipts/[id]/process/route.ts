@@ -3,7 +3,7 @@ import { processReceipt } from "@/app/app/scanner/actions";
 import { preflight, runForMobile } from "@/lib/mobile-api";
 
 export const OPTIONS = preflight;
-export const maxDuration = 60;
+export const maxDuration = 180;
 
 /** Reads the receipt with AI (counts toward the monthly scan quota). */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

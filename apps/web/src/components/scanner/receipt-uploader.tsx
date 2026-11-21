@@ -27,7 +27,11 @@ export function ReceiptUploader({ disabled }: { disabled?: boolean }) {
       // Keep receipts legible: larger than product photos, still strips EXIF/GPS.
       toSend = await prepareImage(file, 2400, 0.9);
       if (!toSend) {
-        setError("No pudimos leer esta imagen. Usa una foto JPG, PNG o WEBP, o un PDF.");
+        setError(
+          /hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name)
+            ? "Este navegador no puede abrir fotos HEIC. Usa “Tomar foto”, una captura de pantalla o una foto en JPG."
+            : "No pudimos leer esta imagen. Usa una foto JPG, PNG o WEBP, o un PDF.",
+        );
         return;
       }
     }

@@ -35,7 +35,10 @@ export function getReceiptExtractor(): ReceiptExtractor | null {
       console.error("[ai] The fixture extractor is not allowed in production; scanner falls back to manual entry");
       return null;
     }
-    return createFixtureExtractor();
+    const mode = process.env.ORVELIA_FIXTURE_MODE?.trim();
+    return createFixtureExtractor(
+      mode === "error" || mode === "flaky" || mode === "invalid" || mode === "auth" ? mode : "ok",
+    );
   }
 
   return null;

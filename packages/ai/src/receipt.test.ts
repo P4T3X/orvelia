@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createFixtureExtractor } from "./providers/fixture";
-import { ExtractionError, extractReceipt, type ReceiptExtractor } from "./extractor";
+import { classifyProviderError, ExtractionError, extractReceipt, extractReceiptWithRetry, type ReceiptExtractor } from "./extractor";
 import { sanitizeReceipt, type RawReceipt } from "./receipt";
 
 const TODAY = "2026-11-20";
@@ -88,5 +88,78 @@ describe("extractReceipt", () => {
       },
     };
     await expect(extractReceipt(failing, input)).rejects.toBeInstanceOf(ExtractionError);
+  });
+});
+
+describe("extractReceiptWithRetry", () => {
+  const input = { data: new Uint8Array([1]), mediaType: "image/jpeg" as const, today: TODAY };
+  const noSleep = async () => {};
+  function flaky(failures: unknown[]): ReceiptExtractor & { calls: number } {
+    const ex = {
+      id: "test",
+      isTest: true,
+      calls: 0,
+      async extract() {
+        const f = failures[ex.calls++];
+        if (f) throw f;
+        return base;
+      },
+    };
+    return ex;
+  }
+
+  it("retries a temporary failure and returns the real result", async () => {
+    const ex = flaky([Object.assign(new Error("503"), { statusCode: 503 })]);
+    const r = await extractReceiptWithRetry(ex, input, { sleep: noSleep });
+    expect(r.tries).toBe(2);
+    expect(r.data.merchant).toBe("Tienda Uno");
+  });
+
+  it("retries output that fails validation", async () => {
+    let calls = 0;
+    const ex: ReceiptExtractor = {
+      id: "test",
+      isTest: true,
+      async extract() {
+        calls++;
+        return (calls === 1 ? { nonsense: true } : base) as RawReceipt;
+      },
+    };
+    const r = await extractReceiptWithRetry(ex, input, { sleep: noSleep });
+    expect(r.tries).toBe(2);
+  });
+
+  it("does not retry configuration errors", async () => {
+    const ex = flaky([Object.assign(new Error("unauthorized"), { statusCode: 401 })]);
+    await expect(extractReceiptWithRetry(ex, input, { sleep: noSleep })).rejects.toMatchObject({
+      reason: "configuration",
+      retryable: false,
+    });
+    expect(ex.calls).toBe(1);
+  });
+
+  it("gives up after maxTries and never invents a result", async () => {
+    const timeout = Object.assign(new Error("t"), { name: "TimeoutError" });
+    const ex = flaky([timeout, timeout, timeout]);
+    await expect(extractReceiptWithRetry(ex, input, { sleep: noSleep, maxTries: 2 })).rejects.toMatchObject({
+      reason: "timeout",
+    });
+    expect(ex.calls).toBe(2);
+  });
+
+  it("waits with exponential backoff", async () => {
+    const waits: number[] = [];
+    const err = Object.assign(new Error("x"), { statusCode: 500 });
+    const ex = flaky([err, err]);
+    await extractReceiptWithRetry(ex, input, { maxTries: 3, baseDelayMs: 100, sleep: async (ms) => void waits.push(ms) });
+    expect(waits).toEqual([100, 200]);
+  });
+});
+
+describe("classifyProviderError", () => {
+  it("maps provider failures", () => {
+    expect(classifyProviderError(Object.assign(new Error(), { statusCode: 403 })).reason).toBe("configuration");
+    expect(classifyProviderError(Object.assign(new Error(), { name: "AbortError" })).reason).toBe("timeout");
+    expect(classifyProviderError(new Error("boom")).reason).toBe("provider_error");
   });
 });

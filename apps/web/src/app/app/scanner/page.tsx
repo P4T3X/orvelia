@@ -9,6 +9,8 @@ import { getScanUsage, listReceipts } from "@/lib/receipts";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Escáner" };
+/** Server actions on this page read receipts with AI (with retries). */
+export const maxDuration = 180;
 
 export default async function ScannerPage({ searchParams }: { searchParams: Promise<{ deleted?: string }> }) {
   const user = await requireUser("/app/scanner");

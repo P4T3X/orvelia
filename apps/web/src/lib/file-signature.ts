@@ -38,3 +38,10 @@ export function sniffUploadType(bytes: Uint8Array): UploadType | null {
 }
 
 export const UPLOAD_EXTENSION: Record<UploadType, string> = { ...EXTENSION_FOR, "application/pdf": "pdf" };
+
+/** HEIC/HEIF (iPhone photos): ISO-BMFF "ftyp" box with a HEIF brand. */
+export function isHeic(bytes: Uint8Array): boolean {
+  if (bytes.length < 12 || String.fromCharCode(...bytes.slice(4, 8)) !== "ftyp") return false;
+  const brand = String.fromCharCode(...bytes.slice(8, 12));
+  return ["heic", "heix", "hevc", "hevx", "heim", "heis", "mif1", "msf1"].includes(brand);
+}

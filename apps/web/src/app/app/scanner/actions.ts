@@ -1,6 +1,6 @@
 "use server";
 
-import { extractReceipt, ExtractionError, type ExtractionResult } from "@orvelia/ai";
+import { classifyProviderError, ExtractionError, extractReceiptWithRetry, type ExtractionResult } from "@orvelia/ai";
 import { UPLOAD_MAX_BYTES } from "@orvelia/domain";
 import { receiptConfirmSchema } from "@orvelia/schemas";
 import { randomUUID } from "node:crypto";
@@ -11,7 +11,7 @@ import { fromZodError, type ActionState } from "@/lib/action-state";
 import { getReceiptExtractor } from "@/lib/ai";
 import { getProfile, getUser } from "@/lib/auth";
 import { todayIn } from "@/lib/dashboard";
-import { sniffUploadType, UPLOAD_EXTENSION, type UploadType } from "@/lib/file-signature";
+import { isHeic, sniffUploadType, UPLOAD_EXTENSION, type UploadType } from "@/lib/file-signature";
 import { STORAGE_BUCKET } from "@/lib/products";
 import { downloadBytes, removeFolder } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
@@ -19,7 +19,15 @@ import { createClient } from "@/lib/supabase/server";
 const SESSION_EXPIRED: ActionState<never> = { ok: false, message: "Tu sesión expiró. Vuelve a iniciar sesión." };
 const idSchema = z.uuid();
 /** A reading that started this long ago without finishing is considered abandoned. */
-const STALE_PROCESSING_MS = 2 * 60 * 1000;
+const STALE_PROCESSING_MS = 5 * 60 * 1000;
+
+const FAILURE_MESSAGE: Record<string, string> = {
+  timeout: "La lectura tardó demasiado.",
+  invalid_output: "La lectura devolvió datos que no pudimos validar.",
+  provider_error: "El servicio de lectura no respondió.",
+  configuration: "La lectura automática no está configurada correctamente. Avisamos al equipo.",
+  file_missing: "No encontramos el archivo del comprobante.",
+};
 
 function revalidateReceipts(id?: string) {
   revalidatePath("/app");
@@ -38,7 +46,14 @@ export async function uploadReceipt(formData: FormData): Promise<ActionState<{ i
 
   const bytes = new Uint8Array(await file.arrayBuffer());
   const type = sniffUploadType(bytes);
-  if (!type) return { ok: false, message: "Usa una foto (JPG, PNG o WEBP) o un PDF." };
+  if (!type) {
+    return {
+      ok: false,
+      message: isHeic(bytes)
+        ? "Esta foto está en formato HEIC. Elige “Tomar foto” o guárdala como JPG e inténtalo de nuevo."
+        : "Usa una foto (JPG, PNG o WEBP) o un PDF.",
+    };
+  }
 
   const id = randomUUID();
   const path = `${user.id}/receipts/${id}/original.${UPLOAD_EXTENSION[type]}`;
@@ -66,7 +81,7 @@ export async function uploadReceipt(formData: FormData): Promise<ActionState<{ i
   return { ok: true, data: { id } };
 }
 
-export type ProcessOutcome = "extracted" | "manual" | "limit" | "failed" | "busy" | "done";
+export type ProcessOutcome = "extracted" | "manual" | "limit" | "retry_limit" | "failed" | "busy" | "done";
 
 export async function processReceipt(id: unknown): Promise<ActionState<{ outcome: ProcessOutcome }>> {
   const user = await getUser();
@@ -97,6 +112,7 @@ export async function processReceipt(id: unknown): Promise<ActionState<{ outcome
     processing_status: "processing" | "needs_review" | "failed";
     extraction?: ExtractionResult | null;
     processing_error?: string | null;
+    processing_error_code?: string | null;
   }) =>
     supabase
       .from("receipts")
@@ -117,44 +133,54 @@ export async function processReceipt(id: unknown): Promise<ActionState<{ outcome
     p_provider: extractor.id,
   });
   if (reserveError || !usageId) {
+    if (reserveError?.message.includes("retry_limit_reached")) {
+      // Keep the failure visible; the user completes the data by hand.
+      revalidateReceipts(receipt.id);
+      return { ok: true, data: { outcome: "retry_limit" } };
+    }
     const limit = reserveError?.message.includes("scan_limit_reached");
-    await setStatus({ processing_status: "needs_review", processing_error: null });
-    revalidateReceipts(receipt.id);
-    return limit
-      ? { ok: true, data: { outcome: "limit" } }
-      : { ok: false, message: "No pudimos iniciar la lectura. Inténtalo de nuevo." };
+    if (limit) {
+      await setStatus({ processing_status: "needs_review", processing_error: null, processing_error_code: null });
+      revalidateReceipts(receipt.id);
+      return { ok: true, data: { outcome: "limit" } };
+    }
+    return { ok: false, message: "No pudimos iniciar la lectura. Inténtalo de nuevo." };
   }
 
-  await setStatus({ processing_status: "processing", processing_error: null });
+  await setStatus({ processing_status: "processing", processing_error: null, processing_error_code: null });
 
   const finish = (succeeded: boolean) =>
     supabase.rpc("finish_scan", { p_usage_id: usageId, p_succeeded: succeeded });
 
   try {
     const bytes = receipt.storage_path ? await downloadBytes(receipt.storage_path) : null;
-    if (!bytes) throw new ExtractionError("File not found in storage", "provider_error");
+    if (!bytes) {
+      await setStatus({ processing_status: "failed", processing_error: FAILURE_MESSAGE.file_missing, processing_error_code: "file_missing" });
+      await finish(false);
+      revalidateReceipts(receipt.id);
+      return { ok: true, data: { outcome: "failed" } };
+    }
 
     const profile = await getProfile(user.id);
-    const result = await extractReceipt(extractor, {
+    const { tries, ...result } = await extractReceiptWithRetry(extractor, {
       data: bytes,
       mediaType: (receipt.mime_type ?? "image/jpeg") as UploadType,
       today: todayIn(profile?.timezone ?? "America/Lima"),
     });
 
-    await setStatus({ processing_status: "needs_review", extraction: result, processing_error: null });
+    if (tries > 1) console.info("[scanner] extraction succeeded after retry", { receiptId: receipt.id, tries });
+    await setStatus({ processing_status: "needs_review", extraction: result, processing_error: null, processing_error_code: null });
     await finish(true);
     revalidateReceipts(receipt.id);
     return { ok: true, data: { outcome: "extracted" } };
   } catch (error) {
-    const reason = error instanceof ExtractionError ? error.reason : "provider_error";
-    console.error("[scanner] extraction failed", { receiptId: receipt.id, reason, error });
-    const message =
-      reason === "timeout"
-        ? "La lectura tardó demasiado."
-        : reason === "invalid_output"
-          ? "La lectura devolvió datos que no pudimos validar."
-          : "El servicio de lectura no respondió.";
-    await setStatus({ processing_status: "failed", processing_error: message });
+    const { reason } = error instanceof ExtractionError ? error : classifyProviderError(error);
+    console.error("[scanner] extraction failed", { receiptId: receipt.id, reason, provider: extractor.id, error });
+    await setStatus({
+      processing_status: "failed",
+      processing_error: FAILURE_MESSAGE[reason] ?? FAILURE_MESSAGE.provider_error,
+      processing_error_code: reason,
+    });
     await finish(false);
     revalidateReceipts(receipt.id);
     return { ok: true, data: { outcome: "failed" } };
