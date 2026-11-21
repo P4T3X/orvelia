@@ -79,6 +79,15 @@ setup notice.
 SQL smoke tests (against a local DB with the migrations applied):
 `supabase/tests/rls_smoke.sql`, `phase2_products.sql`, `phase2b_collection.sql`, `phase3_documents.sql`, `phase4_automation.sql`, `phase5_assistant.sql`, `phase6_billing.sql`, `phase7_family.sql`, `phase8_production.sql`, `phase9_mobile.sql`, `security_audit.sql`; run them all on fresh databases with `scripts/db-test.sh`
 
+## Database migrations on deploy
+
+Production builds on Vercel run `scripts/migrate.mjs` before `next build`. It
+applies any pending file in `supabase/migrations` to the Supabase database from
+the Vercel integration (`POSTGRES_URL_NON_POOLING`, falling back to
+`POSTGRES_URL`), records it in `supabase_migrations.schema_migrations` (the same
+table the Supabase CLI uses) and creates the profile and Free plan for accounts
+that signed up before the schema existed. A failing migration stops the deploy.
+
 ## Deploying to Vercel
 
 Import the repo, set **Root Directory** to `apps/web`, and add the variables
