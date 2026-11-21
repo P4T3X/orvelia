@@ -1,7 +1,7 @@
 "use client";
 
 import { PRODUCT_STATUSES, PRODUCT_STATUS_LABELS, type ProductStatus } from "@orvelia/domain";
-import { Pencil, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -26,7 +26,13 @@ export function ProductActions({ id, name, status }: { id: string; name: string;
         setCurrent(previous);
         toast.error(res.message);
       } else {
-        toast.success(`Marcado como ${PRODUCT_STATUS_LABELS[next].toLowerCase()}.`);
+        toast.success(
+          next === "archived"
+            ? "Producto archivado. Lo encuentras en el filtro Archivados."
+            : previous === "archived" && next === "active"
+              ? "Producto restaurado."
+              : `Marcado como ${PRODUCT_STATUS_LABELS[next].toLowerCase()}.`,
+        );
         router.refresh();
       }
     });
@@ -47,6 +53,17 @@ export function ProductActions({ id, name, status }: { id: string; name: string;
           </option>
         ))}
       </Select>
+      {current === "archived" ? (
+        <Button variant="secondary" onClick={() => changeStatus("active")} disabled={statusPending}>
+          <ArchiveRestore aria-hidden />
+          Restaurar
+        </Button>
+      ) : (
+        <Button variant="ghost" onClick={() => changeStatus("archived")} disabled={statusPending}>
+          <Archive aria-hidden />
+          Archivar
+        </Button>
+      )}
       <Button asChild variant="secondary">
         <Link href={`/app/products/${id}/edit`}>
           <Pencil aria-hidden />

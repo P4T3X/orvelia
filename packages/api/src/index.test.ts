@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addMonths, daysUntil, productErrorMessage, productToRow, relativeDays } from "./index";
+import { addMonths, daysUntil, productErrorMessage, productToRow, relativeDays, warrantyCoverage } from "./index";
 
 describe("dates", () => {
   it("adds months and clamps to month end", () => {
@@ -26,5 +26,17 @@ describe("products", () => {
   });
   it("maps the plan limit error", () => {
     expect(productErrorMessage({ message: "product_limit_reached" })).toMatch(/límite de productos/);
+  });
+});
+
+describe("warranty coverage", () => {
+  const today = "2026-11-21";
+  it("classifies none, undated, active, ending soon and expired", () => {
+    expect(warrantyCoverage(0, null, today)).toEqual({ state: "none" });
+    expect(warrantyCoverage(1, null, today)).toEqual({ state: "undated" });
+    expect(warrantyCoverage(1, "2027-06-01", today)).toMatchObject({ state: "active", endingSoon: false });
+    expect(warrantyCoverage(2, "2026-12-01", today)).toMatchObject({ state: "active", days: 10, endingSoon: true });
+    expect(warrantyCoverage(1, "2026-11-21", today)).toMatchObject({ state: "active", days: 0 });
+    expect(warrantyCoverage(1, "2026-11-20", today)).toEqual({ state: "expired", endDate: "2026-11-20" });
   });
 });

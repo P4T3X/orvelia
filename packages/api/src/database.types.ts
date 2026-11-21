@@ -494,7 +494,32 @@ export type Database = {
         Relationships: [];
       };
     };
-    Views: { [_ in never]: never };
+    Views: {
+      product_overview: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          brand: string | null;
+          model: string | null;
+          status: ProductStatus;
+          category_id: string | null;
+          category_name: string | null;
+          purchase_date: string | null;
+          purchase_price: number | null;
+          currency: string | null;
+          seller: string | null;
+          image_path: string | null;
+          search_text: string;
+          created_at: string;
+          updated_at: string;
+          warranty_count: number;
+          warranty_end: string | null;
+          next_return_deadline: string | null;
+        };
+        Relationships: [];
+      };
+    };
     Functions: {
       billing_overview: {
         Args: Record<string, never>;

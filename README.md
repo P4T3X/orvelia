@@ -77,7 +77,7 @@ setup notice.
 | `pnpm test` | Unit tests (shared Zod schemas) |
 
 SQL smoke tests (against a local DB with the migrations applied):
-`supabase/tests/rls_smoke.sql`, `phase2_products.sql`, `phase3_documents.sql`, `phase4_automation.sql`, `phase5_assistant.sql`, `phase6_billing.sql`, `phase7_family.sql`, `phase8_production.sql`, `phase9_mobile.sql`, `security_audit.sql`; run them all on fresh databases with `scripts/db-test.sh`
+`supabase/tests/rls_smoke.sql`, `phase2_products.sql`, `phase2b_collection.sql`, `phase3_documents.sql`, `phase4_automation.sql`, `phase5_assistant.sql`, `phase6_billing.sql`, `phase7_family.sql`, `phase8_production.sql`, `phase9_mobile.sql`, `security_audit.sql`; run them all on fresh databases with `scripts/db-test.sh`
 
 ## Deploying to Vercel
 
@@ -267,6 +267,35 @@ Production readiness. Details and results in `docs/operations/`.
 - **Store readiness**: icons, permissions copy in Spanish, `eas.json` build
   profiles, and `docs/mobile/store-submission.md` (listing, privacy labels,
   review notes). Subscriptions remain web-only.
+
+## Stage 2 — My Collection (completion pass)
+
+The collection from Phase 2 already had create, edit, archive, restore, delete,
+private photos, categories, search and the plan limit. This pass finishes it:
+
+- **Product cards** (grid of 2 / 3 / 4 columns) and a **list view**
+  (`?view=list`), with the photo, brand · model · category, price, purchase
+  date and chips for warranty coverage ("Vence en 10 días", "Garantía vencida",
+  "Sin garantía", "Hasta 17 nov. 2027") and returns closing within 7 days.
+- **More filters**: brand (from your own products, case-insensitive) and
+  warranty coverage (active / expired / none), next to status, category and search.
+  "Quitar filtros (N)" clears them and keeps the sort and view.
+- **More sorts**: newest, name, purchase date (newest / oldest), price
+  (high / low) and "warranty that ends first".
+- **Database view `product_overview`** (`security_invoker`, so RLS still
+  applies) that adds the category name, number of warranties, latest warranty
+  end and next open return deadline to each product in one query; index on
+  `(user_id, lower(brand))`. Migration: `20261129000000_collection_stage2.sql`.
+- Clearer messages after archiving and restoring, a card-grid loading
+  skeleton, and invalid URL parameters fall back to the defaults instead of failing.
+- Tests: `supabase/tests/phase2b_collection.sql` (view values, filters, and
+  that another person can't read, change, delete or attach warranties to your
+  products), new schema and coverage unit tests, and a 31-step browser test.
+
+Still open: the "warranty that ends first" sort puts expired and uncovered items
+last only within each page of 24; the mobile collection doesn't show coverage
+chips yet; everything was verified against a local Postgres with Supabase's
+roles and RLS, not yet against a hosted Supabase project.
 
 ## What's next
 

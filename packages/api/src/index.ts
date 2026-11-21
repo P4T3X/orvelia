@@ -41,6 +41,20 @@ export function relativeDays(date: string, today: string): string {
   return d > 0 ? `En ${d} días` : `Hace ${-d} días`;
 }
 
+export type Coverage =
+  | { state: "active"; endDate: string; days: number; endingSoon: boolean }
+  | { state: "expired"; endDate: string }
+  | { state: "undated" }
+  | { state: "none" };
+
+/** Warranty state of a product from its summary (count + latest end date). "Ending soon" = 30 days or less. */
+export function warrantyCoverage(count: number, end: string | null | undefined, today: string): Coverage {
+  if (!count) return { state: "none" };
+  if (!end) return { state: "undated" };
+  const days = daysUntil(end, today);
+  return days >= 0 ? { state: "active", endDate: end, days, endingSoon: days <= 30 } : { state: "expired", endDate: end };
+}
+
 // ---------------------------------------------------------------------------
 // Products: writes
 // ---------------------------------------------------------------------------

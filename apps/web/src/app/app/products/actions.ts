@@ -6,7 +6,6 @@ import {
   PRODUCT_IMAGE_MAX_BYTES,
   productInputSchema,
   productStatusUpdateSchema,
-  type ProductData,
 } from "@orvelia/schemas";
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";

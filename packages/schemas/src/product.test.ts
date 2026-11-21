@@ -60,8 +60,18 @@ describe("productInputSchema", () => {
 
 describe("productFiltersSchema", () => {
   it("falls back on invalid values instead of failing", () => {
-    const r = productFiltersSchema.parse({ status: "nope", sort: "drop table", page: "-3", category: "x" });
-    expect(r).toEqual({ q: undefined, status: undefined, sort: undefined, page: undefined, category: undefined });
+    const r = productFiltersSchema.parse({ status: "nope", sort: "drop table", page: "-3", category: "x", coverage: "all", view: "table" });
+    expect(r).toEqual({
+      q: undefined, status: undefined, sort: undefined, page: undefined, category: undefined,
+      brand: undefined, coverage: undefined, view: undefined,
+    });
+  });
+
+  it("accepts the brand, coverage, view and new sorts", () => {
+    const r = productFiltersSchema.parse({ brand: "  Sony ", coverage: "expired", view: "list", sort: "price_asc" });
+    expect(r).toMatchObject({ brand: "Sony", coverage: "expired", view: "list", sort: "price_asc" });
+    expect(productFiltersSchema.parse({ sort: "warranty_end" }).sort).toBe("warranty_end");
+    expect(productFiltersSchema.parse({ brand: "x".repeat(81) }).brand).toBeUndefined();
   });
 
   it("normalizes the search term", () => {

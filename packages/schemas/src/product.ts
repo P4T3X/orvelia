@@ -73,9 +73,11 @@ export const productStatusUpdateSchema = z.object({
   status: z.enum(PRODUCT_STATUSES, "Estado no válido."),
 });
 
-export const PRODUCT_SORTS = ["recent", "name", "purchase_date", "price"] as const;
+export const PRODUCT_SORTS = ["recent", "name", "purchase_date", "purchase_date_asc", "price", "price_asc", "warranty_end"] as const;
 export type ProductSort = (typeof PRODUCT_SORTS)[number];
-export const PRODUCT_PAGE_SIZE = 20;
+export const PRODUCT_PAGE_SIZE = 24;
+export const PRODUCT_COVERAGES = ["active", "expired", "none"] as const;
+export type ProductCoverage = (typeof PRODUCT_COVERAGES)[number];
 
 /** Normalizes a search term the same way the DB `search_text` column does. */
 export function normalizeSearch(term: string): string {
@@ -98,6 +100,17 @@ export const productFiltersSchema = z.object({
   status: z.enum([...PRODUCT_STATUSES, "all"]).optional().catch(undefined),
   category: uuid.optional().catch(undefined),
   sort: z.enum(PRODUCT_SORTS).optional().catch(undefined),
+  /** Exact brand (case-insensitive), as listed in the brand filter. */
+  brand: z
+    .string()
+    .trim()
+    .max(80)
+    .optional()
+    .catch(undefined)
+    .transform((v) => v || undefined),
+  /** Warranty coverage: in force today, all expired, or none registered. */
+  coverage: z.enum(PRODUCT_COVERAGES).optional().catch(undefined),
+  view: z.enum(["grid", "list"]).optional().catch(undefined),
   page: z.coerce.number().int().min(1).max(10_000).optional().catch(undefined),
 });
 export type ProductFilters = z.output<typeof productFiltersSchema>;

@@ -174,6 +174,15 @@ Serve files only through short-lived signed URLs.
   token to whoever signed in last on that device and keeps 10 devices per user.
 - `notification_preferences.push_enabled` (default on).
 
+## Stage 2 additions (My Collection)
+
+- View `product_overview` (`security_invoker = true`): every product column the
+  list needs plus `category_name`, `warranty_count`, `warranty_end` (latest
+  warranty end date) and `next_return_deadline` (earliest return deadline from
+  today). Because it runs with the caller's rights, products RLS applies;
+  `anon` has no access.
+- Index `products_user_brand_idx` on `(user_id, lower(brand))` for the brand filter.
+
 ## Open questions for review
 
 1. Initial `storage_mb` and `ai_queries_per_month` values per plan are placeholders.
@@ -189,3 +198,4 @@ Serve files only through short-lived signed URLs.
 11. Sharing is read-only. Should members be able to add reminders or documents to a shared product?
 12. Shared reminders appear in members' calendars but are e-mailed only to the product's owner.
 13. Should push reminders follow their own lead days, separate from e-mail? Today both use the same schedule.
+14. Should the brand list be cleaned up (for example "samsung" and "Samsung" are shown once but stored as typed)?
