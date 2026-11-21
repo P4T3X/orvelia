@@ -168,3 +168,113 @@
   transform-origin: left;
   animation: fill-bar 1100ms var(--ease-out-soft) 700ms both;
 }
+
+/* Command palette: one short entrance, nothing for reduced motion. */
+@keyframes palette-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.985);
+  }
+}
+dialog.palette[open] {
+  animation: palette-in 160ms var(--ease-out-soft);
+}
+@media (prefers-reduced-motion: reduce) {
+  dialog.palette[open] {
+    animation: none;
+  }
+}
+
+/* Landing: scanner demo sweep, notices and the time slider. */
+@keyframes scan-sweep {
+  from {
+    top: -4rem;
+  }
+  to {
+    top: 100%;
+  }
+}
+.scan-line {
+  background: linear-gradient(to bottom, transparent, color-mix(in oklab, var(--accent) 35%, transparent), transparent);
+  border-bottom: 1px solid var(--accent);
+  animation: scan-sweep 1.3s var(--ease-out-soft) both;
+}
+@keyframes notice-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.notice-in {
+  animation: notice-in 220ms var(--ease-out-soft) both;
+}
+.time-slider {
+  appearance: none;
+  height: 1.5rem;
+  background: transparent;
+  cursor: pointer;
+}
+.time-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border-strong);
+}
+.time-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border-strong);
+}
+.time-slider::-webkit-slider-thumb {
+  appearance: none;
+  margin-top: -8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--surface-raised);
+  border: 2px solid var(--accent);
+  box-shadow: 0 1px 3px rgba(17, 19, 21, 0.2);
+}
+.time-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--surface-raised);
+  border: 2px solid var(--accent);
+}
+.time-slider:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .scan-line,
+  .notice-in {
+    animation: none;
+  }
+}
+
+/* Printable product sheet */
+@media print {
+  @page {
+    margin: 16mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+    color: #111315 !important;
+  }
+  .sheet {
+    max-width: none;
+    font-size: 11pt;
+  }
+  .sheet .text-muted-foreground {
+    color: #55595e !important;
+  }
+  .sheet-block {
+    break-inside: avoid;
+  }
+  [data-sonner-toaster],
+  #main > div {
+    padding: 0 !important;
+  }
+}

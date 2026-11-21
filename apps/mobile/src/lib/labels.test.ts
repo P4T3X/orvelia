@@ -12,7 +12,7 @@ describe("labels", () => {
     expect(greeting(null)).toBe("Buenas noches");
   });
   it("has a label and icon for every upcoming kind and plan", () => {
-    expect(Object.keys(KIND).sort()).toEqual(["document", "reminder", "return", "warranty"]);
+    expect(Object.keys(KIND).sort()).toEqual(["document", "maintenance", "reminder", "return", "warranty"]);
     expect(PLAN_NAMES.ultra).toBe("Ultra");
   });
 });

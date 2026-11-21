@@ -52,6 +52,24 @@ export function ReceiptUploader({ disabled }: { disabled?: boolean }) {
     });
   }
 
+  // Paste a screenshot or copied file anywhere on the page (Ctrl/⌘+V).
+  const handleRef = React.useRef(handle);
+  React.useEffect(() => {
+    handleRef.current = handle;
+  });
+  React.useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      const file = [...(e.clipboardData?.files ?? [])][0];
+      if (!file || disabled || pending) return;
+      e.preventDefault();
+      void handleRef.current(file);
+    };
+    document.addEventListener("paste", onPaste);
+    return () => document.removeEventListener("paste", onPaste);
+  }, [disabled, pending]);
+
   return (
     <div className="grid gap-4">
       {error && <Alert tone="error" title={error} />}
@@ -92,7 +110,9 @@ export function ReceiptUploader({ disabled }: { disabled?: boolean }) {
             Elegir archivo
           </Button>
         </div>
-        <p className="mt-4 hidden text-[13px] text-muted-foreground sm:block">o arrástralo aquí</p>
+        <p className="mt-4 hidden text-[13px] text-muted-foreground sm:block">
+          o arrástralo aquí, o pega una captura con <kbd className="font-sans">Ctrl</kbd>+<kbd className="font-sans">V</kbd>
+        </p>
       </div>
 
       <input

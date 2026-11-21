@@ -406,6 +406,34 @@ scheduled backend job. This stage adds **maintenance schedules** (Module 6):
 - Tests: `supabase/tests/phase5b_maintenance.sql`, 5 new unit tests (schemas,
   interval math, assistant), and a 27-step browser test.
 
+## Stage 6 — Interaction
+
+- **Command palette** (`⌘K` / `Ctrl+K` anywhere in the app, or `/` when not
+  typing; "Buscar…" in the sidebar and a search icon on mobile): searches your
+  products, documents and receipts on the server (RLS, a few of each), jumps to
+  any section, runs actions (add product, scan, upload document, calendar,
+  switch theme) and hands a question to ORVELIA AI prefilled but not sent (each
+  question counts toward the quota). Keyboard: ↑ ↓, Enter, Esc. The native
+  `<dialog>` is the source of truth for open/closed.
+- **Paste to upload**: on the scanner, `Ctrl/⌘+V` uploads a screenshot or a copied file.
+- **Printable warranty-claim sheet** (`/app/products/[id]/ficha`, "Ficha para
+  reclamo" on the product page): product, purchase, receipt, warranties with
+  origin of each date, documents and maintenance history on one page; print
+  styles hide the app chrome so it prints or saves as PDF cleanly.
+- **Landing page**
+  - The hero record is interactive: switch between three example items and
+    drag "Mueve el tiempo" to see the warranty and return window change and
+    which notices ORVELIA would send.
+  - "Pruébalo con una boleta de ejemplo": a hands-on scanner demo with a sample
+    receipt drawn in HTML. It "reads" (scripted, nothing is uploaded), shows
+    Leído/Editado tags, leaves an unreadable price empty, proposes a warranty
+    only because the receipt prints it, and shows the result after confirming.
+    Respects reduced motion.
+- Fixed: hydration mismatch with the dark theme (deterministic dates on the
+  landing, theme label after hydration).
+- Tests: a 35-step browser test (hero, demo, palette, paste, sheet, ownership),
+  axe: 0 violations in light and dark on the new screens.
+
 ## What's next
 
 All nine phases of the technical document are built. Remaining work needs your

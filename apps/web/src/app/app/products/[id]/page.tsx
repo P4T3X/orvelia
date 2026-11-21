@@ -1,4 +1,4 @@
-import { ChevronLeft, FileText, FileUp, Receipt, ScanLine } from "lucide-react";
+import { ChevronLeft, Printer, FileText, FileUp, Receipt, ScanLine } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -94,6 +94,12 @@ export default async function ProductPage({ params }: Props) {
           {subtitle && <p className="mt-1 text-muted-foreground">{subtitle}</p>}
           <div className="mt-5 flex flex-wrap items-center gap-2">
             <ProductActions id={product.id} name={product.name} status={product.status} />
+            <Button asChild variant="ghost" size="sm">
+              <Link href={`/app/products/${product.id}/ficha`}>
+                <Printer aria-hidden />
+                Ficha para reclamo
+              </Link>
+            </Button>
             {family.family?.active && <ShareToggle productId={product.id} shared={shared} familyName={family.family.name} />}
           </div>
         </div>

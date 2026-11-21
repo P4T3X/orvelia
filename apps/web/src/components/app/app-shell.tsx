@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, LogOut, Menu, X } from "lucide-react";
+import { Bell, LogOut, Menu, Search, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
@@ -10,6 +10,7 @@ import { FeedbackButton } from "@/components/app/feedback-button";
 import { ThemeToggle } from "@/components/theme";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { CommandPalette, openCommandPalette, useCommandPaletteShortcuts } from "./command-palette";
 import { primaryNav, secondaryNav, type NavItem } from "./nav-items";
 
 type ShellUser = { name: string; email: string };
@@ -68,6 +69,28 @@ function NavList({ items, pathname }: { items: NavItem[]; pathname: string }) {
   );
 }
 
+const noopSubscribe = () => () => {};
+
+function SearchTrigger({ onOpen }: { onOpen: () => void }) {
+  const mac = React.useSyncExternalStore(
+    noopSubscribe,
+    () => /Mac|iPhone|iPad/.test(navigator.platform),
+    () => false,
+  );
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-keyshortcuts="Control+K Meta+K"
+      className="mx-3 mb-3 flex items-center gap-2.5 rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-border-strong hover:text-foreground"
+    >
+      <Search className="size-4" aria-hidden strokeWidth={1.75} />
+      <span className="flex-1 text-left">Buscar…</span>
+      <kbd className="rounded border border-border px-1.5 text-[11px] tabular-nums">{mac ? "⌘K" : "Ctrl K"}</kbd>
+    </button>
+  );
+}
+
 function SidebarContent({ user, pathname }: { user: ShellUser; pathname: string }) {
   const initials = user.name
     .split(/\s+/)
@@ -115,6 +138,7 @@ export function AppShell({ user, unread, children }: { user: ShellUser; unread: 
   const pathname = usePathname();
   const [drawerFor, setDrawerFor] = React.useState<string | null>(null);
   const drawerOpen = drawerFor === pathname;
+  useCommandPaletteShortcuts();
 
   React.useEffect(() => {
     if (!drawerOpen) return;
@@ -128,20 +152,24 @@ export function AppShell({ user, unread, children }: { user: ShellUser; unread: 
   }, [drawerOpen]);
 
   return (
-    <div className="min-h-dvh lg:grid lg:grid-cols-[17rem_1fr]">
+    <div className="min-h-dvh lg:grid lg:grid-cols-[17rem_1fr] print:block">
       {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-dvh flex-col border-r border-border bg-surface lg:flex">
+      <aside className="sticky top-0 hidden h-dvh flex-col border-r border-border bg-surface lg:flex print:!hidden">
         <div className="flex h-16 items-center justify-between pl-6 pr-3">
           <Logo href="/app" />
           <BellLink unread={unread} pathname={pathname} />
         </div>
+        <SearchTrigger onOpen={openCommandPalette} />
         <SidebarContent user={user} pathname={pathname} />
       </aside>
 
       {/* Mobile top bar */}
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur-md lg:hidden">
+      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur-md lg:hidden print:hidden">
         <Logo href="/app" />
         <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" aria-label="Buscar" onClick={openCommandPalette}>
+            <Search />
+          </Button>
           <BellLink unread={unread} pathname={pathname} />
           <Button
           variant="ghost"
@@ -176,6 +204,8 @@ export function AppShell({ user, unread, children }: { user: ShellUser; unread: 
           </div>
         </div>
       )}
+
+      <CommandPalette />
 
       <main id="main" className="min-w-0">
         <div className="mx-auto max-w-6xl px-4 py-8 sm:px-8 lg:py-10">{children}</div>

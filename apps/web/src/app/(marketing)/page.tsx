@@ -1,6 +1,7 @@
 import { Lock, ShieldCheck, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { OwnershipRecord } from "@/components/marketing/ownership-record";
+import { ScannerDemo } from "@/components/marketing/scanner-demo";
 import { Button } from "@/components/ui/button";
 
 const steps = [
@@ -96,6 +97,21 @@ export default function HomePage() {
               </li>
             ))}
           </ol>
+        </div>
+      </section>
+
+      {/* Hands-on scanner demo */}
+      <section aria-labelledby="try" className="border-t border-border">
+        <div className="mx-auto max-w-6xl px-5 py-20 sm:px-8 lg:py-24">
+          <h2 id="try" className="max-w-xl text-3xl font-medium tracking-[-0.025em] text-balance sm:text-[2.2rem]">
+            Pruébalo con una boleta de ejemplo.
+          </h2>
+          <p className="mt-4 max-w-xl leading-relaxed text-muted-foreground">
+            Así funciona el escáner: lee, tú revisas y nada se guarda sin tu confirmación.
+          </p>
+          <div className="mt-12">
+            <ScannerDemo />
+          </div>
         </div>
       </section>
 

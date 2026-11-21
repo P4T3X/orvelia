@@ -9,7 +9,8 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "ORVELIA AI" };
 
-export default async function AssistantPage() {
+export default async function AssistantPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  const { q } = await searchParams;
   await requireUser("/app/assistant");
   const supabase = await createClient();
   const { data } = await supabase.rpc("assistant_usage");
@@ -53,7 +54,7 @@ export default async function AssistantPage() {
           </Link>
         </Alert>
       )}
-      <AssistantChat disabledReason={disabledReason} />
+      <AssistantChat disabledReason={disabledReason} initialQuestion={typeof q === "string" ? q.slice(0, 500) : undefined} />
     </>
   );
 }

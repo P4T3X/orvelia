@@ -109,10 +109,11 @@ function AnswerBody({ segments }: { segments: AnswerSegment[] }) {
   );
 }
 
-export function AssistantChat({ disabledReason }: { disabledReason?: string }) {
+export function AssistantChat({ disabledReason, initialQuestion }: { disabledReason?: string; initialQuestion?: string }) {
   const router = useRouter();
   const [messages, setMessages] = React.useState<Message[]>([]);
-  const [draft, setDraft] = React.useState("");
+  // Prefilled (never auto-sent: each question counts toward the monthly quota).
+  const [draft, setDraft] = React.useState(initialQuestion ?? "");
   const [pending, startTransition] = React.useTransition();
   const endRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
