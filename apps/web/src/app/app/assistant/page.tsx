@@ -47,9 +47,9 @@ export default async function AssistantPage() {
       )}
       {configured && limit === 0 && (
         <Alert tone="info" title="ORVELIA AI no está incluido en el plan Free." className="mb-6">
-          Estará disponible en los planes de pago cuando se activen.{" "}
+          Está incluido en Plus (100 consultas al mes) y Ultra (500).{" "}
           <Link href="/app/billing" className="underline underline-offset-2">
-            Ver tu plan
+            Ver planes
           </Link>
         </Alert>
       )}

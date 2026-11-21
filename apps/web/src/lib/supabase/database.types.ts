@@ -9,6 +9,7 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 type PlanId = "free" | "plus" | "ultra";
+type SubscriptionStatus = "trialing" | "active" | "past_due" | "canceled" | "incomplete" | "unpaid";
 type ProcessingStatus = "uploaded" | "processing" | "needs_review" | "confirmed" | "failed";
 type DocumentType = "receipt" | "invoice" | "warranty" | "manual" | "insurance" | "certificate" | "other";
 type WarrantyKind = "manufacturer" | "store" | "extended" | "other";
@@ -50,25 +51,81 @@ export type Database = {
         };
         Relationships: [];
       };
-      subscriptions: ReadOnly<{
-        id: string;
-        user_id: string;
-        provider: string;
-        plan: PlanId;
-        status: "trialing" | "active" | "past_due" | "canceled" | "incomplete" | "unpaid";
-        current_period_start: string | null;
-        current_period_end: string | null;
-        created_at: string;
-        updated_at: string;
-      }>;
+      subscriptions: {
+        Row: {
+          id: string;
+          user_id: string;
+          provider: string;
+          provider_customer_id: string | null;
+          provider_subscription_id: string | null;
+          plan: PlanId;
+          status: SubscriptionStatus;
+          current_period_start: string | null;
+          current_period_end: string | null;
+          cancel_at_period_end: boolean;
+          last_payment_status: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Record<string, never>;
+        Update: {
+          provider?: string;
+          provider_customer_id?: string | null;
+          provider_subscription_id?: string | null;
+          plan?: PlanId;
+          status?: SubscriptionStatus;
+          current_period_start?: string | null;
+          current_period_end?: string | null;
+          cancel_at_period_end?: boolean;
+          last_payment_status?: string | null;
+        };
+        Relationships: [];
+      };
       plan_limits: ReadOnly<{
         plan: PlanId;
         max_products: number | null;
         scans_per_month: number;
         storage_mb: number;
         ai_queries_per_month: number | null;
+        price_monthly: number;
+        currency: string;
         updated_at: string;
       }>;
+      billing_checkouts: {
+        Row: {
+          id: string;
+          user_id: string;
+          plan: PlanId;
+          amount: number;
+          currency: string;
+          provider: string;
+          provider_subscription_id: string | null;
+          status: "created" | "pending" | "authorized" | "cancelled" | "expired" | "failed";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: { user_id: string; plan: PlanId; amount: number; currency: string; provider?: string };
+        Update: {
+          provider_subscription_id?: string | null;
+          status?: "created" | "pending" | "authorized" | "cancelled" | "expired" | "failed";
+        };
+        Relationships: [];
+      };
+      billing_events: {
+        Row: {
+          id: string;
+          provider: string;
+          event_id: string;
+          type: string;
+          data_id: string | null;
+          received_at: string;
+          processed_at: string | null;
+          error: string | null;
+        };
+        Insert: { provider: string; event_id: string; type: string; data_id: string | null };
+        Update: { processed_at?: string | null; error?: string | null };
+        Relationships: [];
+      };
       products: {
         Row: {
           id: string;
@@ -413,6 +470,18 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      billing_overview: {
+        Args: Record<string, never>;
+        Returns: {
+          effective_plan: PlanId;
+          subscribed_plan: PlanId;
+          status: SubscriptionStatus;
+          provider: string;
+          current_period_end: string | null;
+          cancel_at_period_end: boolean;
+          last_payment_status: string | null;
+        }[];
+      };
       reserve_assistant_query: { Args: { p_provider: string }; Returns: string };
       finish_usage: { Args: { p_usage_id: string; p_succeeded: boolean }; Returns: undefined };
       assistant_usage: {

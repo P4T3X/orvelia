@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageIntro } from "@/components/marketing/page-intro";
 import { Button } from "@/components/ui/button";
+import { formatMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -15,13 +16,13 @@ export default function PricingPage() {
   return (
     <>
       <PageIntro title="Empieza gratis. Crece cuando lo necesites.">
-        Los planes de pago se activarán pronto. Mientras tanto, el plan Free está disponible para todos.
+        Precios mensuales en soles. Paga con tarjeta, Yape o saldo de Mercado Pago y cancela cuando quieras.
       </PageIntro>
 
       <div className="mx-auto max-w-6xl px-5 pb-24 sm:px-8">
         <div className="grid gap-px overflow-hidden rounded-xl border border-border bg-border lg:grid-cols-3">
           {PLANS.map((plan) => {
-            const available = plan.id === "free";
+            const free = plan.priceMonthly === 0;
             return (
               <section
                 key={plan.id}
@@ -43,8 +44,9 @@ export default function PricingPage() {
                 </div>
                 <p className="mt-2 text-muted-foreground">{plan.tagline}</p>
 
-                <p className="mt-8 text-3xl font-medium tracking-[-0.02em]">
-                  {available ? "Gratis" : "Precio por anunciar"}
+                <p className="mt-8">
+                  <span className="text-3xl font-medium tracking-[-0.02em]">{free ? "Gratis" : formatMoney(plan.priceMonthly, "PEN")}</span>
+                  {!free && <span className="text-muted-foreground"> al mes</span>}
                 </p>
 
                 <ul className="mt-8 grid flex-1 content-start gap-3 text-[15px]">
@@ -56,21 +58,16 @@ export default function PricingPage() {
                   ))}
                 </ul>
 
-                {available ? (
-                  <Button asChild className="mt-10" size="lg">
-                    <Link href="/register">Crear cuenta gratis</Link>
-                  </Button>
-                ) : (
-                  <Button className="mt-10" size="lg" variant="secondary" disabled>
-                    Disponible pronto
-                  </Button>
-                )}
+                <Button asChild className="mt-10" size="lg" variant={plan.highlighted || free ? "primary" : "secondary"}>
+                  <Link href={free ? "/register" : "/app/billing"}>{free ? "Crear cuenta gratis" : `Elegir ${plan.name}`}</Link>
+                </Button>
               </section>
             );
           })}
         </div>
         <p className="mt-6 text-sm text-muted-foreground">
-          Los límites de cada plan se aplican en nuestros servidores y pueden ajustarse antes del lanzamiento.
+          Los límites de cada plan se aplican en nuestros servidores. Al cancelar, conservas tu plan hasta el fin del
+          periodo pagado.
         </p>
       </div>
     </>

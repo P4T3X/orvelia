@@ -123,6 +123,19 @@ Serve files only through short-lived signed URLs.
 - No conversation storage: questions and answers are not persisted.
 - Verified on PostgreSQL 16 (`supabase/tests/phase5_assistant.sql`).
 
+## Phase 6 additions
+
+- `plan_limits.price_monthly` / `currency`: Free 0, Plus 19.99, Ultra 29.99 (PEN).
+- `subscriptions.cancel_at_period_end`, `last_payment_status`.
+- `effective_plan(user)`: `active`/`trialing`, or `canceled`/`past_due` while
+  `current_period_end > now()`; otherwise `free`. `current_plan_limits`,
+  `enforce_product_limit` and `product_usage` now use it.
+- `billing_checkouts`: one row per checkout attempt (plan, amount, provider subscription
+  id, status). Users can read their own; only the server (service role) writes.
+- `billing_events`: webhook log, unique `(provider, event_id)`, no policies (service role only).
+- `billing_overview()` RPC for the billing page.
+- Verified on PostgreSQL 16 (`supabase/tests/phase6_billing.sql`).
+
 ## Open questions for review
 
 1. Initial `storage_mb` and `ai_queries_per_month` values per plan are placeholders.
@@ -131,4 +144,6 @@ Serve files only through short-lived signed URLs.
 7. AI quotas per plan (Free 0 / Plus 100 / Ultra 500) are placeholders: set them from measured cost per question.
 6. Should automatic reminders also go out for products marked sold/gifted/disposed? Currently they do until the warranty/return is deleted.
 5. Scan quota resets on the 1st of each month in the user's time zone; should it follow the billing period for paid plans instead?
-3. Payment provider for Peru (affects `subscriptions.provider` values and webhooks).
+3. ~~Payment provider for Peru?~~ Mercado Pago Suscripciones (Phase 6).
+8. Electronic receipts (SUNAT boletas/facturas) and IGV on subscription prices are not handled yet; confirm with an accountant whether 19.99/29.99 include IGV.
+9. Downgrade Ultra → Plus currently starts the new plan at its first payment (no proration).

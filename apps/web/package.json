@@ -12,6 +12,7 @@
   "dependencies": {
     "@hookform/resolvers": "^7.0.8",
     "@orvelia/ai": "workspace:*",
+    "@orvelia/billing": "workspace:*",
     "@orvelia/domain": "workspace:*",
     "@orvelia/schemas": "workspace:*",
     "@radix-ui/react-slot": "^1.2.0",

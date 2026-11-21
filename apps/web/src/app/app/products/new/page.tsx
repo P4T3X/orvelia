@@ -29,11 +29,16 @@ export default async function NewProductPage() {
       {usage.atLimit ? (
         <>
           <Alert tone="info" title={`Llegaste al límite de ${usage.max} productos de tu plan.`}>
-            Archiva o elimina un producto para agregar otro. Los planes con productos ilimitados se activarán pronto.
+            Elimina un producto para agregar otro, o pasa a Plus para tener productos ilimitados.
           </Alert>
-          <Button asChild variant="secondary" className="mt-6">
-            <Link href="/app/products">Volver a mi colección</Link>
-          </Button>
+          <div className="mt-6 flex gap-2">
+            <Button asChild>
+              <Link href="/app/billing">Ver planes</Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link href="/app/products">Volver a mi colección</Link>
+            </Button>
+          </div>
         </>
       ) : (
         <ProductForm

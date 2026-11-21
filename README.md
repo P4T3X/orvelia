@@ -77,7 +77,7 @@ setup notice.
 | `pnpm test` | Unit tests (shared Zod schemas) |
 
 SQL smoke tests (against a local DB with the migrations applied):
-`supabase/tests/rls_smoke.sql`, `phase2_products.sql`, `phase3_documents.sql`, `phase4_automation.sql`, `phase5_assistant.sql` (run with `psql "$DB_URL" -f …`)
+`supabase/tests/rls_smoke.sql`, `phase2_products.sql`, `phase3_documents.sql`, `phase4_automation.sql`, `phase5_assistant.sql`, `phase6_billing.sql` (run with `psql "$DB_URL" -f …`)
 
 ## Deploying to Vercel
 
@@ -163,10 +163,41 @@ ORVELIA_ASSISTANT_MODEL=<provider/model with tool calling>   # falls back to ORV
 Plan quotas (`plan_limits.ai_queries_per_month`): Free 0 · Plus 100 · Ultra 500 —
 **placeholders to tune** against real cost per question before launch.
 
-## Next: Phase 6 — Monetization
+## What's in Phase 6
 
-Payment provider for Peru, checkout for Plus/Ultra, signed webhooks as the only
-writer of `subscriptions`, plan changes, and the billing page.
+- **Plans and prices** (soles, monthly): Free S/ 0, Plus S/ 19.99, Ultra S/ 29.99.
+  Prices live in `plan_limits.price_monthly`; the pricing page and `/app/billing` read them.
+- **Mercado Pago Suscripciones** (`packages/billing`): checkout via a `preapproval`
+  (card, Yape or Mercado Pago balance, automatic monthly charge and retries). ORVELIA never
+  sees card data.
+- **Webhook** `POST /api/webhooks/mercadopago`: verifies the `x-signature` HMAC, handles
+  `subscription_preapproval` and `subscription_authorized_payment`, re-reads the real state
+  from the Mercado Pago API (never trusts the body), checks the amount against the plan
+  price, and records each event once in `billing_events` (idempotent; 500 → MP retries).
+  It is the only writer of `subscriptions` besides the user's own cancel action.
+- **Billing page**: current plan, renewal date, usage (products, scans, AI), subscribe /
+  change plan, cancel. On return from checkout the page confirms the payment itself.
+- **Plan rules** (`effective_plan()` in Postgres): canceled or past-due subscriptions keep
+  the plan until `current_period_end`, then fall back to Free. Changing plan starts the new
+  plan when its first payment is approved and cancels the previous subscription.
+
+### Turning on payments
+
+1. In Mercado Pago Developers create an application (product: *Suscripciones*) with
+   your Peruvian Mercado Pago account.
+2. Copy the **Access Token** (use the test one first) → `MERCADOPAGO_ACCESS_TOKEN`.
+3. *Webhooks* → URL `https://<prod>/api/webhooks/mercadopago`, events **Planes y
+   suscripciones** (both). Copy the generated secret → `MERCADOPAGO_WEBHOOK_SECRET`.
+4. Set `SUPABASE_SERVICE_ROLE_KEY` and `NEXT_PUBLIC_SITE_URL` (used for the return URL).
+5. Test with Mercado Pago *test users* (one seller, one buyer) before switching to the
+   production token.
+
+Without these variables the billing page shows plans but disables checkout.
+
+## Next: Phase 7 — Family and advanced
+
+Shared spaces for family members (Ultra), roles and invitations, transfers of ownership,
+and data export.
 
 ---
 

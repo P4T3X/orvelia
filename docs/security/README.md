@@ -1,4 +1,4 @@
-# Security baseline (Phase 0–1)
+# Security baseline
 
 ## In place
 
@@ -37,6 +37,13 @@
   against the records the tools returned in that turn; amounts are summed by the
   server. Conversations are not stored. Monthly and per-minute limits are
   enforced in Postgres.
+
+- **Payments** never touch card data (Mercado Pago hosted checkout). The webhook
+  rejects requests without a valid `x-signature` (HMAC-SHA256, 15-minute window,
+  constant-time compare), ignores the request body's claims and re-reads each
+  subscription from the Mercado Pago API, checks the amount against the plan price,
+  and is idempotent via `billing_events`. Subscriptions and checkouts are written only
+  with the service role on the server; users can only read their own rows.
 
 ## Supabase dashboard settings to configure
 

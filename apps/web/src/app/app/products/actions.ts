@@ -40,7 +40,7 @@ function toRow(d: ProductData) {
 
 function dbErrorMessage(error: { code?: string; message: string }): string {
   if (error.message.includes("product_limit_reached")) {
-    return "Llegaste al límite de productos de tu plan. Archiva o elimina alguno, o mejora tu plan cuando esté disponible.";
+    return "Llegaste al límite de productos de tu plan. Elimina alguno o pasa a Plus para tener productos ilimitados.";
   }
   if (error.code === "42501") return "La categoría elegida no está disponible.";
   if (error.code === "23503") return "La categoría elegida ya no existe.";
