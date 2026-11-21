@@ -1,4 +1,4 @@
-import { DOCUMENT_TYPES, SUPPORTED_CURRENCIES } from "@orvelia/domain";
+import { DOCUMENT_TYPES, SUPPORTED_CURRENCIES, WARRANTY_KINDS } from "@orvelia/domain";
 import { z } from "zod";
 import { parsePrice } from "./product";
 
@@ -51,10 +51,32 @@ export const receiptConfirmSchema = z
         }),
       )
       .max(20, "Máximo 20 productos por comprobante."),
+    /**
+     * Optional warranty and return window for the products created from this
+     * receipt. Every field may be empty: nothing is assumed.
+     */
+    protection: z
+      .object({
+        warrantyKind: z.enum(WARRANTY_KINDS, "Tipo no válido.").default("other"),
+        warrantyEndDate: calendarDate,
+        warrantyProvider: optionalText(160),
+        warrantyCoverage: optionalText(4000),
+        returnDeadline: calendarDate,
+        returnPolicy: optionalText(4000),
+      })
+      .prefault({ warrantyEndDate: "", warrantyProvider: "", warrantyCoverage: "", returnDeadline: "", returnPolicy: "" }),
   })
   .refine((d) => d.total === null || d.tax === null || Number(d.tax) <= Number(d.total), {
     path: ["tax"],
     message: "El impuesto no puede ser mayor que el total.",
+  })
+  .refine((d) => !d.purchaseDate || !d.protection.warrantyEndDate || d.protection.warrantyEndDate >= d.purchaseDate, {
+    path: ["protection", "warrantyEndDate"],
+    message: "La garantía no puede terminar antes de la compra.",
+  })
+  .refine((d) => !d.purchaseDate || !d.protection.returnDeadline || d.protection.returnDeadline >= d.purchaseDate, {
+    path: ["protection", "returnDeadline"],
+    message: "El plazo de devolución no puede ser anterior a la compra.",
   });
 
 export type ReceiptConfirmInput = z.input<typeof receiptConfirmSchema>;

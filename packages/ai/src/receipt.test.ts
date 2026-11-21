@@ -15,6 +15,10 @@ const base: RawReceipt = {
   total: 100,
   tax: 15.25,
   items: [{ description: "Producto", quantity: 1, amount: 100 }],
+  warrantyMonths: null,
+  warrantyTerms: null,
+  returnDays: null,
+  returnPolicy: null,
 };
 
 describe("sanitizeReceipt", () => {
@@ -161,5 +165,24 @@ describe("classifyProviderError", () => {
     expect(classifyProviderError(Object.assign(new Error(), { statusCode: 403 })).reason).toBe("configuration");
     expect(classifyProviderError(Object.assign(new Error(), { name: "AbortError" })).reason).toBe("timeout");
     expect(classifyProviderError(new Error("boom")).reason).toBe("provider_error");
+  });
+});
+
+describe("printed warranty and return terms", () => {
+  it("keeps printed terms and never assumes them", () => {
+    const { data } = sanitizeReceipt(base, TODAY);
+    expect(data.warrantyMonths).toBeNull();
+    expect(data.returnDays).toBeNull();
+    const printed = sanitizeReceipt({ ...base, warrantyMonths: 12, warrantyTerms: " Garantía  12 meses ", returnDays: 30 }, TODAY);
+    expect(printed.data.warrantyMonths).toBe(12);
+    expect(printed.data.warrantyTerms).toBe("Garantía 12 meses");
+    expect(printed.data.returnDays).toBe(30);
+  });
+
+  it("drops impossible terms with a warning", () => {
+    const { data, warnings } = sanitizeReceipt({ ...base, warrantyMonths: 1.5, returnDays: 9000 }, TODAY);
+    expect(data.warrantyMonths).toBeNull();
+    expect(data.returnDays).toBeNull();
+    expect(warnings).toContain("invalid_term");
   });
 });

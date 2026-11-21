@@ -353,6 +353,31 @@ The Vercel team needs AI Gateway enabled with credits or a payment method. If
 the gateway rejects the credentials, receipts fail with "no está configurada
 correctamente" and aren't retried. Set an AI Gateway budget before launch.
 
+## Stage 4 — Warranties and returns
+
+Warranties and return windows per product (provider, dates, coverage, policy,
+source document, verification state and automatic reminders) already existed
+from Phase 4. This stage adds:
+
+- **Garantías page** (`/app/warranties`, in the main navigation): every warranty
+  and return window across the collection, most urgent first, with filters
+  (por vencer, vigentes, devoluciones, por verificar, sin fecha de fin, vencidas)
+  and counts. Warranties ending within 30 days and returns closing within 7 count
+  as "por vencer". Each row opens the product's warranty section.
+- **Scanner → warranty and return** (Module 4, step 9): when confirming a
+  receipt that creates products, a "Garantía y devolución" section lets the user
+  record them for those products. The reader now captures warranty and return
+  terms **only when printed** (`warrantyMonths`, `warrantyTerms`, `returnDays`,
+  `returnPolicy`); dates are computed from the printed term and the purchase
+  date, never from a typical policy. Without printed terms the fields stay empty.
+- **Provenance**: a date the user keeps exactly as computed from the document is
+  saved as `confirmed`; anything typed or changed is `manual`. Reminders are
+  created by the existing database triggers.
+- Validation: a warranty can't end, and a return deadline can't fall, before the
+  purchase date; protection needs at least one new product (checked on the server).
+- No migration needed. Tests: 4 new unit tests (printed terms, date math,
+  confirmation schema) and a 29-step browser test.
+
 ## What's next
 
 All nine phases of the technical document are built. Remaining work needs your

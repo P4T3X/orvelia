@@ -1,7 +1,7 @@
 "use server";
 
 import { classifyProviderError, ExtractionError, extractReceiptWithRetry, type ExtractionResult } from "@orvelia/ai";
-import { UPLOAD_MAX_BYTES } from "@orvelia/domain";
+import { datesFromPrintedTerms, UPLOAD_MAX_BYTES } from "@orvelia/domain";
 import { receiptConfirmSchema } from "@orvelia/schemas";
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
@@ -192,7 +192,7 @@ const SOURCE_FIELDS = ["merchant", "receiptNumber", "purchaseDate", "total", "ta
 export async function confirmReceipt(
   id: unknown,
   input: unknown,
-): Promise<ActionState<{ created: number; limitReached: boolean; firstProductId: string | null }>> {
+): Promise<ActionState<{ created: number; limitReached: boolean; firstProductId: string | null; protectionSaved: number }>> {
   const user = await getUser();
   if (!user) return SESSION_EXPIRED;
   const receiptId = idSchema.safeParse(id);
@@ -200,6 +200,9 @@ export async function confirmReceipt(
   const parsed = receiptConfirmSchema.safeParse(input);
   if (!parsed.success) return fromZodError(parsed.error);
   const d = parsed.data;
+  if ((d.protection.warrantyEndDate || d.protection.returnDeadline) && d.newProducts.length === 0) {
+    return { ok: false, message: "Crea al menos un producto para registrar su garantía o devolución." };
+  }
 
   const supabase = await createClient();
   const { data: receipt } = await supabase
@@ -266,6 +269,7 @@ export async function confirmReceipt(
   let created = 0;
   let limitReached = false;
   let firstProductId: string | null = d.linkProductIds[0] ?? null;
+  const createdIds: string[] = [];
   for (const p of d.newProducts) {
     const { data, error } = await supabase
       .from("products")
@@ -286,7 +290,52 @@ export async function confirmReceipt(
       break;
     }
     created++;
+    createdIds.push(data.id);
     firstProductId ??= data.id;
+  }
+
+  // Warranty / return window for the new products. A value counts as
+  // "confirmed" only when it equals what the document printed (and the user
+  // kept it); anything typed or changed is "manual". Nothing is assumed.
+  const prot = d.protection;
+  let protectionSaved = 0;
+  if (createdIds.length > 0 && (prot.warrantyEndDate || prot.returnDeadline)) {
+    const printed = datesFromPrintedTerms(d.purchaseDate, extracted ?? {});
+    const warrantyVerification = prot.warrantyEndDate === printed.warrantyEnd ? "confirmed" : "manual";
+    const returnVerification = prot.returnDeadline === printed.returnDeadline ? "confirmed" : "manual";
+    if (prot.warrantyEndDate) {
+      const { error } = await supabase.from("warranties").insert(
+        createdIds.map((productId) => ({
+          user_id: user.id,
+          product_id: productId,
+          kind: prot.warrantyKind,
+          provider: prot.warrantyProvider,
+          start_date: d.purchaseDate,
+          end_date: prot.warrantyEndDate,
+          coverage_description: prot.warrantyCoverage,
+          source_document_id: null,
+          verification_status: warrantyVerification,
+        })),
+      );
+      if (!error) protectionSaved++;
+      else console.error("[scanner] warranty insert failed", { receiptId: receipt.id, error: error.message });
+    }
+    if (prot.returnDeadline) {
+      const { error } = await supabase.from("return_deadlines").insert(
+        createdIds.map((productId) => ({
+          user_id: user.id,
+          product_id: productId,
+          deadline_date: prot.returnDeadline as string,
+          policy_details: prot.returnPolicy,
+          source_document_id: null,
+          verification_status: returnVerification,
+        })),
+      );
+      if (!error) protectionSaved++;
+      else console.error("[scanner] return deadline insert failed", { receiptId: receipt.id, error: error.message });
+    }
+    revalidatePath("/app/calendar");
+    revalidatePath("/app/warranties");
   }
 
   revalidateReceipts(receipt.id);
@@ -294,7 +343,7 @@ export async function confirmReceipt(
   return {
     ok: true,
     message: "Comprobante guardado.",
-    data: { created, limitReached, firstProductId },
+    data: { created, limitReached, firstProductId, protectionSaved },
   };
 }
 

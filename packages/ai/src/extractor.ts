@@ -116,4 +116,5 @@ Return ONLY values that are printed in the document.
 - Amounts: plain numbers with a dot as decimal separator, no currency symbols or thousands separators.
 - "S/" means PEN. "US$" means USD.
 - Items: one entry per printed line item; leave quantity or amount null if not printed.
+- Warranty and return terms: fill them ONLY from text printed on the document. Most receipts print none; then return null. Never use a typical or legal default.
 - If the file is not a purchase document, set isPurchaseDocument to false and the other fields to null.`;

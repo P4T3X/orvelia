@@ -80,6 +80,7 @@ describe("productFiltersSchema", () => {
   });
 });
 
+import { datesFromPrintedTerms } from "@orvelia/domain";
 import { documentUploadSchema, receiptConfirmSchema } from "./receipt";
 
 describe("receiptConfirmSchema", () => {
@@ -111,6 +112,32 @@ describe("receiptConfirmSchema", () => {
 
   it("rejects new products without name", () => {
     expect(receiptConfirmSchema.safeParse({ ...ok, newProducts: [{ name: " ", price: "" }] }).success).toBe(false);
+  });
+
+  const prot = { warrantyEndDate: "", warrantyProvider: "", warrantyCoverage: "", returnDeadline: "", returnPolicy: "" };
+
+  it("protection is optional and empty by default", () => {
+    const r = receiptConfirmSchema.parse(ok);
+    expect(r.protection).toEqual({ warrantyKind: "other", warrantyEndDate: null, warrantyProvider: null, warrantyCoverage: null, returnDeadline: null, returnPolicy: null });
+  });
+
+  it("accepts a warranty and a return window", () => {
+    const r = receiptConfirmSchema.parse({ ...ok, protection: { ...prot, warrantyEndDate: "2027-03-14", warrantyProvider: " Samsung ", returnDeadline: "2026-04-13" } });
+    expect(r.protection).toMatchObject({ warrantyEndDate: "2027-03-14", warrantyProvider: "Samsung", returnDeadline: "2026-04-13" });
+  });
+
+  it("rejects a warranty ending before the purchase", () => {
+    expect(receiptConfirmSchema.safeParse({ ...ok, protection: { ...prot, warrantyEndDate: "2026-01-01" } }).success).toBe(false);
+  });
+
+});
+
+describe("datesFromPrintedTerms", () => {
+  it("computes dates only from printed terms", () => {
+    expect(datesFromPrintedTerms("2026-01-31", { warrantyMonths: 1, returnDays: 30 })).toEqual({ warrantyEnd: "2026-02-28", returnDeadline: "2026-03-02" });
+    expect(datesFromPrintedTerms("2026-03-14", { warrantyMonths: 12 })).toEqual({ warrantyEnd: "2027-03-14", returnDeadline: null });
+    expect(datesFromPrintedTerms(null, { warrantyMonths: 12, returnDays: 7 })).toEqual({ warrantyEnd: null, returnDeadline: null });
+    expect(datesFromPrintedTerms("2026-03-14", {})).toEqual({ warrantyEnd: null, returnDeadline: null });
   });
 });
 

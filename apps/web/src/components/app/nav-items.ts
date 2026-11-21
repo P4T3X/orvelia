@@ -8,6 +8,7 @@ import {
   Package,
   ScanLine,
   Settings,
+  ShieldCheck,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -17,6 +18,7 @@ export type NavItem = { href: string; label: string; icon: LucideIcon; exact?: b
 export const primaryNav: NavItem[] = [
   { href: "/app", label: "Inicio", icon: House, exact: true },
   { href: "/app/products", label: "Mi colección", icon: Package },
+  { href: "/app/warranties", label: "Garantías", icon: ShieldCheck },
   { href: "/app/scanner", label: "Escáner", icon: ScanLine },
   { href: "/app/documents", label: "Documentos", icon: FileText },
   { href: "/app/calendar", label: "Calendario", icon: CalendarDays },

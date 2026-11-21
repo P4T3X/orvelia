@@ -85,3 +85,80 @@ export async function getProductProtection(userId: string, productId: string) {
   }));
   return { warranties, returns };
 }
+
+export type ProtectionEntry = {
+  id: string;
+  type: "warranty" | "return";
+  productId: string;
+  productName: string;
+  productArchived: boolean;
+  kind: WarrantyKind | null;
+  provider: string | null;
+  /** End date for warranties, deadline for returns. */
+  date: string | null;
+  details: string | null;
+  verification: VerificationStatus;
+  sourceDocumentTitle: string | null;
+};
+
+type ProductRef = { id: string; name: string; status: string } | { id: string; name: string; status: string }[] | null;
+const productOf = (p: ProductRef) => (Array.isArray(p) ? p[0] : p) ?? null;
+
+/** Every warranty and return window the user has, across products. */
+export async function listAllProtection(userId: string): Promise<ProtectionEntry[]> {
+  const supabase = await createClient();
+  const [w, r] = await Promise.all([
+    supabase
+      .from("warranties")
+      .select(
+        "id, kind, provider, end_date, coverage_description, verification_status, products!warranties_product_fk(id, name, status), documents!warranties_document_fk(title)",
+      )
+      .eq("user_id", userId)
+      .limit(1000),
+    supabase
+      .from("return_deadlines")
+      .select(
+        "id, deadline_date, policy_details, verification_status, products!return_deadlines_product_fk(id, name, status), documents!return_deadlines_document_fk(title)",
+      )
+      .eq("user_id", userId)
+      .limit(1000),
+  ]);
+  if (w.error || r.error) throw new Error(`No se pudieron cargar garantías y devoluciones: ${(w.error ?? r.error)?.message}`);
+
+  const entries: ProtectionEntry[] = [];
+  for (const x of w.data ?? []) {
+    const p = productOf(x.products as ProductRef);
+    if (!p) continue;
+    entries.push({
+      id: x.id,
+      type: "warranty",
+      productId: p.id,
+      productName: p.name,
+      productArchived: p.status === "archived",
+      kind: x.kind,
+      provider: x.provider,
+      date: x.end_date,
+      details: x.coverage_description,
+      verification: x.verification_status,
+      sourceDocumentTitle: titleOf(x.documents as DocRef),
+    });
+  }
+  for (const x of r.data ?? []) {
+    const p = productOf(x.products as ProductRef);
+    if (!p) continue;
+    entries.push({
+      id: x.id,
+      type: "return",
+      productId: p.id,
+      productName: p.name,
+      productArchived: p.status === "archived",
+      kind: null,
+      provider: null,
+      date: x.deadline_date,
+      details: x.policy_details,
+      verification: x.verification_status,
+      sourceDocumentTitle: titleOf(x.documents as DocRef),
+    });
+  }
+  return entries;
+}

@@ -3,7 +3,7 @@
 import type { ExtractionResult } from "@orvelia/ai";
 import { WARNING_MESSAGES } from "@orvelia/ai/receipt";
 import type { ProcessingStatus } from "@orvelia/domain";
-import { SUPPORTED_CURRENCIES } from "@orvelia/domain";
+import { datesFromPrintedTerms, SUPPORTED_CURRENCIES, WARRANTY_KIND_LABELS, WARRANTY_KINDS } from "@orvelia/domain";
 import { parsePrice, receiptConfirmSchema, type ReceiptConfirmInput } from "@orvelia/schemas";
 import { ExternalLink, Loader2, Plus, RotateCcw, Trash2 } from "lucide-react";
 import Link from "next/link";
@@ -15,7 +15,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field, fieldAria } from "@/components/ui/field";
-import { Input, Select } from "@/components/ui/input";
+import { Input, Select, Textarea } from "@/components/ui/input";
 import { useActionForm } from "@/lib/use-action-form";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +36,15 @@ export type WorkspaceReceipt = {
   retriesLeft: number;
   fieldSources: Record<string, "extracted" | "manual">;
   linkedProducts: { id: string; name: string }[];
+};
+
+const emptyProtection = {
+  warrantyKind: "other" as const,
+  warrantyEndDate: "",
+  warrantyProvider: "",
+  warrantyCoverage: "",
+  returnDeadline: "",
+  returnPolicy: "",
 };
 
 type ProductOption = { id: string; name: string; receiptId: string | null };
@@ -240,6 +249,7 @@ function ReviewForm({
     tax: ex?.tax == null ? null : ex.tax.toFixed(2),
   };
 
+  const printed = datesFromPrintedTerms(ex?.purchaseDate ?? null, ex ?? {});
   const currency = (c: string | null | undefined) =>
     (SUPPORTED_CURRENCIES as readonly string[]).includes(c ?? "") ? (c as (typeof SUPPORTED_CURRENCIES)[number]) : null;
 
@@ -253,6 +263,7 @@ function ReviewForm({
         currency: currency(receipt.currency) ?? currency(defaultCurrency) ?? "PEN",
         linkProductIds: [],
         newProducts: [],
+        protection: emptyProtection,
       }
     : {
         merchant: ex?.merchant ?? "",
@@ -263,6 +274,14 @@ function ReviewForm({
         currency: currency(ex?.currency) ?? currency(defaultCurrency) ?? "PEN",
         linkProductIds: [],
         newProducts: [],
+        protection: {
+          ...emptyProtection,
+          // Prefilled only from terms printed on the document.
+          warrantyEndDate: printed.warrantyEnd ?? "",
+          warrantyCoverage: ex?.warrantyTerms ?? "",
+          returnDeadline: printed.returnDeadline ?? "",
+          returnPolicy: ex?.returnPolicy ?? "",
+        },
       };
 
   const [rows, setRows] = React.useState<ItemRow[]>(() =>
@@ -294,14 +313,24 @@ function ReviewForm({
     setRows(checked);
     if (invalid) return { ok: false, message: "Revisa los productos marcados." };
 
+    const newProducts = checked.filter((r) => r.include).map((r) => ({ name: r.name, price: r.price }));
     const res = await confirmReceipt(receipt.id, {
       ...values,
       linkProductIds: linked,
-      newProducts: checked.filter((r) => r.include).map((r) => ({ name: r.name, price: r.price })),
+      newProducts,
+      // The protection section only applies to new products; drop it when none are created.
+      protection: newProducts.length > 0 ? values.protection : emptyProtection,
     });
     if (!res.ok || !res.data) return res;
 
-    const { created, limitReached } = res.data;
+    const { created, limitReached, protectionSaved } = res.data;
+    if (protectionSaved > 0 && !limitReached) {
+      toast.success(`Comprobante guardado: ${created === 1 ? "1 producto creado" : `${created} productos creados`} con su garantía o devolución.`);
+      setRows([]);
+      setLinked([]);
+      router.refresh();
+      return;
+    }
     if (limitReached) toast.warning(`Comprobante guardado. Se crearon ${created} productos: llegaste al límite de tu plan.`);
     else if (created > 0) toast.success(`Comprobante guardado y ${created === 1 ? "1 producto creado" : `${created} productos creados`}.`);
     else toast.success(confirmed ? "Cambios guardados." : "Comprobante guardado.");
@@ -523,6 +552,76 @@ function ReviewForm({
           </p>
         )}
       </section>
+
+      {!confirmed && includedCount > 0 && (
+        <section aria-labelledby="protection-title" className="grid gap-4">
+          <div>
+            <h2 id="protection-title" className="font-medium">
+              Garantía y devolución
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {ex?.warrantyMonths || ex?.returnDays
+                ? "Completamos solo lo que el comprobante dice. Revísalo: se aplicará a los productos nuevos."
+                : "Opcional. El comprobante no indica plazos: no asumimos ninguna garantía ni política de devolución."}
+            </p>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field
+              id="warrantyEndDate"
+              label="Garantía hasta"
+              error={errors.protection?.warrantyEndDate?.message}
+              hint={ex?.warrantyMonths ? `El comprobante indica ${ex.warrantyMonths} ${ex.warrantyMonths === 1 ? "mes" : "meses"}.` : undefined}
+            >
+              <Input
+                {...fieldAria("warrantyEndDate", errors.protection?.warrantyEndDate?.message)}
+                {...form.register("protection.warrantyEndDate")}
+                type="date"
+              />
+            </Field>
+            <Field id="warrantyKind" label="Tipo de garantía">
+              <Select id="warrantyKind" {...form.register("protection.warrantyKind")}>
+                {WARRANTY_KINDS.map((k) => (
+                  <option key={k} value={k}>
+                    {WARRANTY_KIND_LABELS[k]}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field id="warrantyProvider" label="Quién da la garantía" error={errors.protection?.warrantyProvider?.message}>
+              <Input
+                {...fieldAria("warrantyProvider", errors.protection?.warrantyProvider?.message)}
+                {...form.register("protection.warrantyProvider")}
+                placeholder="Fabricante o tienda"
+              />
+            </Field>
+            <Field
+              id="returnDeadline"
+              label="Devolver hasta"
+              error={errors.protection?.returnDeadline?.message}
+              hint={ex?.returnDays ? `El comprobante indica ${ex.returnDays} ${ex.returnDays === 1 ? "día" : "días"}.` : undefined}
+            >
+              <Input
+                {...fieldAria("returnDeadline", errors.protection?.returnDeadline?.message)}
+                {...form.register("protection.returnDeadline")}
+                type="date"
+              />
+            </Field>
+          </div>
+          {(watch.protection?.warrantyEndDate || ex?.warrantyTerms) && (
+            <Field id="warrantyCoverage" label="Cobertura" error={errors.protection?.warrantyCoverage?.message}>
+              <Textarea id="warrantyCoverage" rows={2} {...form.register("protection.warrantyCoverage")} />
+            </Field>
+          )}
+          {(watch.protection?.returnDeadline || ex?.returnPolicy) && (
+            <Field id="returnPolicy" label="Política de devolución" error={errors.protection?.returnPolicy?.message}>
+              <Textarea id="returnPolicy" rows={2} {...form.register("protection.returnPolicy")} />
+            </Field>
+          )}
+          <p className="text-[13px] text-muted-foreground">
+            Te recordaremos antes de cada fecha según tus preferencias de notificación.
+          </p>
+        </section>
+      )}
 
       {linkable.length > 0 && (
         <section className="grid gap-3">

@@ -40,6 +40,10 @@ export function createFixtureExtractor(mode: FixtureMode = "ok"): ReceiptExtract
           { description: "Audífonos inalámbricos con cancelación de ruido", quantity: 1, amount: 1199.0 },
           { description: "Funda protectora", quantity: 1, amount: 139.0 },
         ],
+        warrantyMonths: 12,
+        warrantyTerms: "Garantía de 12 meses con el fabricante.",
+        returnDays: 30,
+        returnPolicy: "Cambios y devoluciones hasta 30 días con boleta.",
       };
     },
   };

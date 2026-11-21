@@ -33,3 +33,33 @@ export const LEAD_DAY_OPTIONS = {
 
 /** Verification statuses a user can choose by hand ("extracted" is set by the scanner only). */
 export const USER_VERIFICATION_STATUSES = ["manual", "confirmed", "needs_verification"] as const;
+
+/** YYYY-MM-DD + n calendar months, clamped to the month's last day (Jan 31 + 1 → Feb 28/29). */
+export function addMonthsIso(date: string, months: number): string {
+  const [y, m, d] = date.split("-").map(Number) as [number, number, number];
+  const target = new Date(Date.UTC(y, m - 1 + months, 1));
+  const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  target.setUTCDate(Math.min(d, lastDay));
+  return target.toISOString().slice(0, 10);
+}
+
+/** YYYY-MM-DD + n days. */
+export function addDaysIso(date: string, days: number): string {
+  const t = new Date(`${date}T00:00:00Z`);
+  t.setUTCDate(t.getUTCDate() + days);
+  return t.toISOString().slice(0, 10);
+}
+
+/**
+ * Dates implied by terms printed on a receipt. Only computed when both the
+ * purchase date and the printed term exist; otherwise null (never assumed).
+ */
+export function datesFromPrintedTerms(
+  purchaseDate: string | null,
+  terms: { warrantyMonths?: number | null; returnDays?: number | null },
+): { warrantyEnd: string | null; returnDeadline: string | null } {
+  return {
+    warrantyEnd: purchaseDate && terms.warrantyMonths ? addMonthsIso(purchaseDate, terms.warrantyMonths) : null,
+    returnDeadline: purchaseDate && terms.returnDays ? addDaysIso(purchaseDate, terms.returnDays) : null,
+  };
+}

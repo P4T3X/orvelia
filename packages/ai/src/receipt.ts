@@ -38,6 +38,22 @@ export const rawReceiptSchema = z.object({
       }),
     )
     .describe("Purchased items as printed. Empty array if none are legible."),
+  warrantyMonths: z
+    .number()
+    .nullable()
+    .describe('Warranty length in months ONLY if the document prints it (e.g. "Garantía: 12 meses" → 12, "1 año" → 12). null otherwise. Never assume a standard warranty.'),
+  warrantyTerms: z
+    .string()
+    .nullable()
+    .describe("Warranty text exactly as printed (who provides it, what it covers). null if none is printed."),
+  returnDays: z
+    .number()
+    .nullable()
+    .describe('Return/exchange window in days ONLY if printed (e.g. "Cambios hasta 30 días" → 30). null otherwise. Never assume a store policy.'),
+  returnPolicy: z
+    .string()
+    .nullable()
+    .describe("Return or exchange policy text exactly as printed. null if none is printed."),
 });
 export type RawReceipt = z.infer<typeof rawReceiptSchema>;
 
@@ -54,6 +70,11 @@ export type ReceiptExtraction = {
   total: number | null;
   tax: number | null;
   items: ReceiptItem[];
+  /** Printed warranty/return terms. Absent in extractions made before Stage 4. */
+  warrantyMonths?: number | null;
+  warrantyTerms?: string | null;
+  returnDays?: number | null;
+  returnPolicy?: string | null;
 };
 
 export type ExtractionWarning =
@@ -64,7 +85,8 @@ export type ExtractionWarning =
   | "invalid_amount"
   | "items_total_mismatch"
   | "tax_exceeds_total"
-  | "nothing_found";
+  | "nothing_found"
+  | "invalid_term";
 
 export const WARNING_MESSAGES: Record<ExtractionWarning, string> = {
   not_a_receipt: "El archivo no parece un comprobante de compra.",
@@ -75,6 +97,7 @@ export const WARNING_MESSAGES: Record<ExtractionWarning, string> = {
   items_total_mismatch: "La suma de los productos no coincide con el total; revisa los montos.",
   tax_exceeds_total: "El impuesto leído es mayor que el total; revísalo.",
   nothing_found: "No encontramos datos legibles en el archivo.",
+  invalid_term: "Un plazo de garantía o devolución leído no era válido y se dejó vacío.",
 };
 
 const CURRENCY_ALIASES: Record<string, string> = {
@@ -91,7 +114,7 @@ const CURRENCY_ALIASES: Record<string, string> = {
   "€": "EUR",
 };
 
-const text = (v: string | null, max: number) => {
+const text = (v: string | null | undefined, max: number) => {
   const t = v?.replace(/\s+/g, " ").trim();
   return t ? t.slice(0, max) : null;
 };
@@ -103,6 +126,15 @@ const money = (v: number | null, warnings: Set<ExtractionWarning>) => {
     return null;
   }
   return Math.round(v * 100) / 100;
+};
+
+const wholeNumber = (v: number | null | undefined, min: number, max: number, warnings: Set<ExtractionWarning>) => {
+  if (v === null || v === undefined) return null;
+  if (!Number.isInteger(v) || v < min || v > max) {
+    warnings.add("invalid_term");
+    return null;
+  }
+  return v;
 };
 
 /**
@@ -163,6 +195,10 @@ export function sanitizeReceipt(raw: RawReceipt, today: string): { data: Receipt
     total,
     tax,
     items,
+    warrantyMonths: wholeNumber(raw.warrantyMonths, 1, 240, warnings),
+    warrantyTerms: text(raw.warrantyTerms, 1000),
+    returnDays: wholeNumber(raw.returnDays, 1, 365, warnings),
+    returnPolicy: text(raw.returnPolicy, 1000),
   };
 
   const empty = !data.merchant && !data.receiptNumber && !data.purchaseDate && data.total === null && items.length === 0;
