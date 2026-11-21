@@ -31,6 +31,12 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+      - name: Bundle the mobile app (web target, catches Metro/import errors)
+        run: pnpm --filter @orvelia/mobile exec expo export --platform web --output-dir /tmp/mobile-web
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+          EXPO_PUBLIC_API_URL: https://orvelia.example
       - name: Dependency audit (production)
         run: pnpm audit --prod --audit-level high
 

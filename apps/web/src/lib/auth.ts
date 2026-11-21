@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { cache } from "react";
 import { isSupabaseConfigured } from "@/lib/env";
-import { createClient } from "@/lib/supabase/server";
+import { bearerToken, createClient } from "@/lib/supabase/server";
 
 /**
  * Lightweight check for public pages (header state). Verifies the JWT
@@ -26,7 +26,8 @@ export const getUser = cache(async () => {
   await connection();
   if (!isSupabaseConfigured()) return null;
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.getUser();
+  const bearer = await bearerToken();
+  const { data, error } = bearer ? await supabase.auth.getUser(bearer) : await supabase.auth.getUser();
   if (error || !data.user) return null;
   return data.user;
 });

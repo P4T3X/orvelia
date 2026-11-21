@@ -46,7 +46,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   // Shared workspace packages ship TypeScript source.
-  transpilePackages: ["@orvelia/domain", "@orvelia/schemas", "@orvelia/ai", "@orvelia/billing"],
+  transpilePackages: ["@orvelia/api", "@orvelia/domain", "@orvelia/schemas", "@orvelia/ai", "@orvelia/billing"],
   experimental: {
     // Product images are capped at 5 MB in validation; leave room for multipart overhead.
     serverActions: { bodySizeLimit: "6mb" },

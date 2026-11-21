@@ -77,7 +77,7 @@ setup notice.
 | `pnpm test` | Unit tests (shared Zod schemas) |
 
 SQL smoke tests (against a local DB with the migrations applied):
-`supabase/tests/rls_smoke.sql`, `phase2_products.sql`, `phase3_documents.sql`, `phase4_automation.sql`, `phase5_assistant.sql`, `phase6_billing.sql`, `phase7_family.sql`, `phase8_production.sql`, `security_audit.sql`; run them all on fresh databases with `scripts/db-test.sh`
+`supabase/tests/rls_smoke.sql`, `phase2_products.sql`, `phase3_documents.sql`, `phase4_automation.sql`, `phase5_assistant.sql`, `phase6_billing.sql`, `phase7_family.sql`, `phase8_production.sql`, `phase9_mobile.sql`, `security_audit.sql`; run them all on fresh databases with `scripts/db-test.sh`
 
 ## Deploying to Vercel
 
@@ -245,10 +245,34 @@ Production readiness. Details and results in `docs/operations/`.
 - **Launch**: `docs/operations/launch-checklist.md` lists every account, setting,
   variable and legal step for go-live.
 
-## Next: Phase 9 — Mobile
+## What's in Phase 9
 
-Shared domain and API packages, a React Native (Expo) app, iOS and Android testing,
-push notifications and store submission.
+- **Mobile app** (`apps/mobile`, Expo SDK 58 + Expo Router, iOS and Android):
+  sign in or create an account, home, collection with search, product detail,
+  add a product with a photo, two-tap warranties, scan and confirm receipts with
+  AI, upcoming dates (including family-shared ones), notices, ORVELIA AI and
+  in-app account deletion. See `apps/mobile/README.md`.
+- **Shared packages**: `@orvelia/api` holds the database types, locale
+  formatting and the data-access functions both apps use (RLS still decides
+  what each person sees); domain rules and validation stay in `@orvelia/domain`
+  and `@orvelia/schemas`.
+- **Mobile API** on the web app (`/api/mobile/*`): receipt upload, AI reading,
+  confirmation, the assistant and account deletion, authenticated with the
+  Supabase access token (`Authorization: Bearer`) and running the same server
+  code and quotas as the web.
+- **Push notifications**: devices register Expo push tokens
+  (`register_push_token`); the daily reminders job sends a push to each device
+  alongside the e-mail, removes tokens the service reports as unregistered, and
+  respects a per-user on/off switch.
+- **Store readiness**: icons, permissions copy in Spanish, `eas.json` build
+  profiles, and `docs/mobile/store-submission.md` (listing, privacy labels,
+  review notes). Subscriptions remain web-only.
+
+## What's next
+
+All nine phases of the technical document are built. Remaining work needs your
+accounts: deploy (see `docs/operations/launch-checklist.md`), run the closed
+beta, and build and submit the mobile app with EAS.
 
 ---
 

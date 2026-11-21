@@ -26,8 +26,9 @@ Work top to bottom. Each item names where it is done.
 | `RESEND_API_KEY`, `EMAIL_FROM` | domain verified in Resend (SPF, DKIM, DMARC) |
 | `AI_GATEWAY_API_KEY` (or Vercel OIDC), `ORVELIA_AI_PROVIDER=gateway` | set an AI Gateway budget |
 | `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_WEBHOOK_SECRET` | production credentials, after testing with test users |
+| `EXPO_ACCESS_TOKEN` (optional) | only if "enhanced push security" is on in Expo |
 
-Never set `ORVELIA_AI_PROVIDER=fixture`, `MERCADOPAGO_API_URL` or `EMAIL_API_URL` in production.
+Never set `ORVELIA_AI_PROVIDER=fixture`, `MERCADOPAGO_API_URL`, `EMAIL_API_URL` or `EXPO_PUSH_URL` in production.
 
 ## 4. Integrations
 - [ ] Mercado Pago: webhook `https://<domain>/api/webhooks/mercadopago`, events *Planes y suscripciones*; one real S/ payment made and refunded.
@@ -51,7 +52,12 @@ Never set `ORVELIA_AI_PROVIDER=fixture`, `MERCADOPAGO_API_URL` or `EMAIL_API_URL
 - [ ] SUNAT electronic receipts (boletas/facturas) for subscriptions and IGV on the prices.
 - [ ] Libro de Reclamaciones virtual (Código de Protección al Consumidor).
 
-## 8. Launch day
+## 8. Mobile app (see `docs/mobile/store-submission.md`)
+- [ ] `eas init`; push credentials (APNs key, FCM v1); `EXPO_PUBLIC_*` set in `eas.json` for production.
+- [ ] Development build tested on an iPhone and an Android phone: camera, push permission, a reminder push that opens the product.
+- [ ] TestFlight and Play internal testing with the beta group before store review.
+
+## 9. Launch day
 - [ ] Promote the preview to production; check `/api/health` and sign-up.
 - [ ] Watch logs and the feedback table for the first 24 hours.
 - [ ] Rollback plan: Vercel → Deployments → *Instant Rollback*; database changes are additive, so the previous release keeps working.

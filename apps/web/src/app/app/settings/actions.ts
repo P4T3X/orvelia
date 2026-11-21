@@ -42,7 +42,8 @@ export async function updateProfile(input: unknown): Promise<ActionState> {
  * cancels an active Mercado Pago subscription, removes the user's files from
  * storage, then deletes the auth user — every table cascades from it.
  */
-export async function deleteAccount(input: unknown): Promise<ActionState | void> {
+/** Shared by the web action and the mobile API; does not redirect. */
+export async function deleteAccountCore(input: unknown): Promise<ActionState> {
   const user = await getUser();
   if (!user?.email) return { ok: false, message: "Tu sesión expiró. Vuelve a iniciar sesión." };
   const typed = typeof input === "object" && input && "email" in input ? String((input as { email: unknown }).email) : "";
@@ -91,6 +92,12 @@ export async function deleteAccount(input: unknown): Promise<ActionState | void>
     console.error("[account] delete user failed", error.message);
     return { ok: false, message: "No pudimos eliminar tu cuenta. Inténtalo de nuevo en unos minutos." };
   }
+  return { ok: true, message: "Tu cuenta fue eliminada." };
+}
+
+export async function deleteAccount(input: unknown): Promise<ActionState | void> {
+  const res = await deleteAccountCore(input);
+  if (!res.ok) return res;
   const supabase = await createClient();
   await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
   redirect("/cuenta-eliminada");

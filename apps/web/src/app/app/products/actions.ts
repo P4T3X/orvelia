@@ -1,5 +1,6 @@
 "use server";
 
+import { productErrorMessage, productToRow } from "@orvelia/api";
 import {
   categoryInputSchema,
   PRODUCT_IMAGE_MAX_BYTES,
@@ -20,32 +21,8 @@ import { createClient } from "@/lib/supabase/server";
 const SESSION_EXPIRED: ActionState<never> = { ok: false, message: "Tu sesión expiró. Vuelve a iniciar sesión." };
 const idSchema = z.uuid();
 
-function toRow(d: ProductData) {
-  return {
-    name: d.name,
-    brand: d.brand,
-    model: d.model,
-    category_id: d.categoryId,
-    description: d.description,
-    notes: d.notes,
-    purchase_date: d.purchaseDate,
-    purchase_price: d.purchasePrice,
-    // A currency is only meaningful (and required by the DB) when there is a price.
-    currency: d.purchasePrice === null ? null : d.currency,
-    seller: d.seller,
-    serial_number: d.serialNumber,
-    status: d.status,
-  };
-}
-
-function dbErrorMessage(error: { code?: string; message: string }): string {
-  if (error.message.includes("product_limit_reached")) {
-    return "Llegaste al límite de productos de tu plan. Elimina alguno o pasa a Plus para tener productos ilimitados.";
-  }
-  if (error.code === "42501") return "La categoría elegida no está disponible.";
-  if (error.code === "23503") return "La categoría elegida ya no existe.";
-  return "No pudimos guardar el producto. Inténtalo de nuevo.";
-}
+const toRow = productToRow;
+const dbErrorMessage = productErrorMessage;
 
 function revalidateProducts(id?: string) {
   revalidatePath("/app");

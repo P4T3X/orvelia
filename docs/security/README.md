@@ -63,6 +63,15 @@
   `/api/health` never returns configuration values unless called with
   `CRON_SECRET`, and then only booleans.
 
+- **Mobile API (Phase 9)**: `/api/mobile/*` accepts only `Authorization: Bearer
+  <Supabase access token>`, verified with Supabase Auth on every request; there are
+  no cookies on that path, so its permissive CORS can't be used for cross-site
+  requests with the user's session. The handlers call the same server code as the
+  web (same validation, quotas and RLS). The app keeps the session in the device's
+  app sandbox (expo-sqlite storage). Push tokens are per user and can only be
+  registered through a definer function; tokens the push service reports as
+  unregistered are deleted.
+
 ## Supabase dashboard settings to configure
 
 - Auth → Email: **Confirm email ON**, secure password change ON.

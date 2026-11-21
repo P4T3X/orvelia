@@ -1,0 +1,19 @@
+{
+  "cli": { "version": ">= 16.0.0", "appVersionSource": "remote" },
+  "build": {
+    "base": {
+      "node": "22.20.0",
+      "pnpm": "10.28.0",
+      "env": { "EXPO_PUBLIC_SUPABASE_URL": "https://<project>.supabase.co", "EXPO_PUBLIC_API_URL": "https://<domain>" }
+    },
+    "development": { "extends": "base", "developmentClient": true, "distribution": "internal" },
+    "preview": { "extends": "base", "distribution": "internal", "channel": "preview", "android": { "buildType": "apk" } },
+    "production": { "extends": "base", "channel": "production", "autoIncrement": true }
+  },
+  "submit": {
+    "production": {
+      "ios": { "ascAppId": "<App Store Connect app id>" },
+      "android": { "track": "internal", "releaseStatus": "draft" }
+    }
+  }
+}

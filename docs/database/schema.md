@@ -167,6 +167,13 @@ Serve files only through short-lived signed URLs.
 - `feedback` (kind, message ≤ 2000, app page): users insert and read their own,
   append-only, at most 10 per day (trigger). The team reads it with the service role.
 
+## Phase 9 additions
+
+- `push_tokens` (Expo push token, platform, device name): users read and delete
+  their own; registration only through `register_push_token()`, which moves a
+  token to whoever signed in last on that device and keeps 10 devices per user.
+- `notification_preferences.push_enabled` (default on).
+
 ## Open questions for review
 
 1. Initial `storage_mb` and `ai_queries_per_month` values per plan are placeholders.
@@ -181,3 +188,4 @@ Serve files only through short-lived signed URLs.
 10. Family seats (5 incl. owner) and the 20 invitations/day limit are placeholders.
 11. Sharing is read-only. Should members be able to add reminders or documents to a shared product?
 12. Shared reminders appear in members' calendars but are e-mailed only to the product's owner.
+13. Should push reminders follow their own lead days, separate from e-mail? Today both use the same schedule.
